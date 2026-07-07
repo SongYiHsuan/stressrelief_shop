@@ -470,8 +470,8 @@
         <button class="active" data-page="dashboard">📊 總覽</button>
         <button data-page="members">👥 會員清單</button>
         <button data-page="broadcast">📣 發送內容</button>
-        <button data-page="scan">▣ 掃碼會員</button>
-        <button data-page="wallet">💰 儲值 / 使用</button>
+        <button data-page="scan">▣ 掃碼 / 儲值</button>
+        <button data-page="wallet">💰 儲值頁面</button>
         <button data-page="logs">🧾 儲值紀錄</button>
       </nav>
     </aside>
@@ -1131,41 +1131,95 @@
     }
 
     function renderScan() {
-      setTitle('掃碼會員', '掃描會員 QR Code，快速查詢並處理儲值金');
+      setTitle('掃碼會員 / 儲值使用', '掃碼槍輸入後，左下角顯示會員資訊，右側處理儲值金');
 
       document.getElementById('page').innerHTML = `
         <div class="grid-2">
-          <div class="panel">
-            <h2 class="panel-title">掃碼 / 查詢會員</h2>
+          <div>
+            <div class="panel">
+              <h2 class="panel-title">掃碼槍 / 查詢會員</h2>
 
-            <div class="scanner-box">
-              <video id="scanVideo" playsinline></video>
-              <div class="scan-placeholder" id="scanPlaceholder">
-                可使用手機或平板相機掃描會員 QR Code。<br />
-                若瀏覽器不支援掃描，可直接輸入會員編號。
+              <div class="scanner-box">
+                <video id="scanVideo" playsinline></video>
+                <div class="scan-placeholder" id="scanPlaceholder">
+                  掃描槍請先點下面輸入框。<br />
+                  掃完會員 QR Code 後，系統會自動查詢會員。<br />
+                  如果掃描槍沒有自動查詢，請按 Enter。
+                </div>
+              </div>
+
+              <div class="form-row" style="margin-top:14px;">
+                <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
+                <input
+                  id="scanKeyword"
+                  placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9"
+                  autocomplete="off"
+                  autofocus
+                />
+              </div>
+
+              <div class="btn-row">
+                <button class="btn green" id="findScanMemberBtn">查詢會員</button>
+                <button class="btn secondary" id="startScanBtn">啟動相機掃描</button>
+                <button class="btn secondary" id="stopScanBtn">停止掃描</button>
+              </div>
+
+              <div id="scanMsg" class="message"></div>
+            </div>
+
+            <div class="panel">
+              <h2 class="panel-title">會員資訊</h2>
+              <div id="scanMemberResult">
+                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員資料會顯示在這裡。</div>'}
               </div>
             </div>
-
-            <div class="btn-row">
-              <button class="btn" id="startScanBtn">啟動相機掃描</button>
-              <button class="btn secondary" id="stopScanBtn">停止掃描</button>
-            </div>
-
-            <div class="form-row" style="margin-top:14px;">
-              <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-              <input id="scanKeyword" placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9" />
-            </div>
-
-            <div class="btn-row">
-              <button class="btn green" id="findScanMemberBtn">查詢會員</button>
-            </div>
-
-            <div id="scanMsg" class="message"></div>
           </div>
 
           <div class="panel">
-            <h2 class="panel-title">會員資料</h2>
-            <div id="scanMemberResult" class="muted">尚未選擇會員。</div>
+            <h2 class="panel-title">儲值金處理</h2>
+
+            <div class="form-grid">
+              <div class="form-row">
+                <label>操作類型</label>
+                <select id="walletType">
+                  <option value="add">儲值</option>
+                  <option value="use">使用</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label>金額</label>
+                <input id="walletAmount" type="number" placeholder="例如 500" inputmode="numeric" />
+              </div>
+
+              <div class="form-row">
+                <label>付款方式</label>
+                <select id="payMethod">
+                  <option value="">不指定</option>
+                  <option value="現金">現金</option>
+                  <option value="轉帳">轉帳</option>
+                  <option value="刷卡">刷卡</option>
+                  <option value="Line Pay">Line Pay</option>
+                  <option value="儲值金">儲值金</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label>店員</label>
+                <input id="staffName" placeholder="例如 店員A" />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <label>備註</label>
+              <input id="walletNote" placeholder="例如 現金儲值 / 消費折抵 / 退款調整" />
+            </div>
+
+            <div class="btn-row">
+              <button class="btn green" id="submitWalletBtn">確認送出</button>
+            </div>
+
+            <div id="walletMsg" class="message"></div>
           </div>
         </div>
       `;
@@ -1176,17 +1230,31 @@
 
       const scanKeywordInput = document.getElementById('scanKeyword');
       if (scanKeywordInput) {
+        scanKeywordInput.focus();
+
         scanKeywordInput.addEventListener('keydown', function (event) {
           if (event.key === 'Enter') {
             event.preventDefault();
             findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
           }
         });
-      }
 
+        scanKeywordInput.addEventListener('input', function () {
+          clearTimeout(scanKeywordInput._scanTimer);
+
+          scanKeywordInput._scanTimer = setTimeout(function () {
+            const value = scanKeywordInput.value.trim();
+
+            if (value.length >= 8) {
+              findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
+            }
+          }, 450);
+        });
+      }
 
       document.getElementById('startScanBtn').onclick = startScanner;
       document.getElementById('stopScanBtn').onclick = stopScanner;
+      document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
     async function startScanner() {
@@ -1257,8 +1325,9 @@
       }
     }
 
-    async function findMemberFromInput(inputId, msgId, resultId) {
-      const keyword = document.getElementById(inputId).value.trim();
+    async     async function findMemberFromInput(inputId, msgId, resultId) {
+      const input = document.getElementById(inputId);
+      const keyword = input.value.trim();
 
       if (!keyword) {
         showMessage(msgId, '請輸入會員編號、電話或姓名。');
@@ -1274,6 +1343,10 @@
 
         document.getElementById(resultId).innerHTML = renderSelectedMember(data.member);
         showMessage(msgId, '已找到會員：' + data.member.displayName);
+
+        if (input) {
+          input.select();
+        }
       } catch (err) {
         state.selectedMember = null;
         document.getElementById(resultId).innerHTML = '<div class="muted">找不到會員。</div>';
@@ -1289,51 +1362,58 @@
               <div class="member-card-title">${escapeHtml(member.displayName)}</div>
               <div class="muted">${escapeHtml(member.memberId)}</div>
             </div>
-            <div class="member-card-points">${money(member.points)} 點</div>
+            <div class="member-card-points">$${money(member.storedValue)}</div>
           </div>
 
           <div class="member-meta">
             <div>電話：${escapeHtml(member.phone || '')}</div>
             <div>等級：${escapeHtml(member.level || '一般會員')}</div>
+            <div>儲值金：$${money(member.storedValue)}</div>
             <div>累積消費：$${money(member.totalSpend)}</div>
             <div>標籤：${escapeHtml(member.tags || '')}</div>
             <div>最後到訪：${escapeHtml(member.lastVisitAt || '')}</div>
           </div>
         </div>
-
-        <div class="btn-row">
-          <button class="btn green" onclick="setPage('wallet')">前往儲值 / 使用</button>
-          <button class="btn secondary" onclick="setPage('logs')">查看紀錄</button>
-        </div>
       `;
     }
 
     function renderWallet() {
-      setTitle('儲值 / 使用', '處理會員儲值金');
+      setTitle('儲值 / 使用', '查詢會員後，處理會員儲值金');
 
       document.getElementById('page').innerHTML = `
         <div class="grid-2">
-          <div class="panel">
-            <h2 class="panel-title">查詢會員</h2>
+          <div>
+            <div class="panel">
+              <h2 class="panel-title">查詢會員</h2>
 
-            <div class="form-row">
-              <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-              <input id="walletKeyword" placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9" value="${escapeHtml(state.selectedMember?.memberId || '')}" />
+              <div class="form-row">
+                <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
+                <input
+                  id="walletKeyword"
+                  placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9"
+                  value="${escapeHtml(state.selectedMember?.memberId || '')}"
+                  autocomplete="off"
+                  autofocus
+                />
+              </div>
+
+              <div class="btn-row">
+                <button class="btn" id="findWalletMemberBtn">查詢會員</button>
+              </div>
+
+              <div id="walletMsg" class="message"></div>
             </div>
 
-            <div class="btn-row">
-              <button class="btn" id="findWalletMemberBtn">查詢會員</button>
-            </div>
-
-            <div id="walletMsg" class="message"></div>
-
-            <div id="walletMemberResult" style="margin-top:14px;">
-              ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。</div>'}
+            <div class="panel">
+              <h2 class="panel-title">會員資訊</h2>
+              <div id="walletMemberResult">
+                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員資料會顯示在這裡。</div>'}
+              </div>
             </div>
           </div>
 
           <div class="panel">
-            <h2 class="panel-title">處理儲值金</h2>
+            <h2 class="panel-title">儲值金處理</h2>
 
             <div class="form-grid">
               <div class="form-row">
@@ -1345,8 +1425,8 @@
               </div>
 
               <div class="form-row">
-                <label>數量 / 金額</label>
-                <input id="walletAmount" type="number" placeholder="例如 500" />
+                <label>金額</label>
+                <input id="walletAmount" type="number" placeholder="例如 500" inputmode="numeric" />
               </div>
 
               <div class="form-row">
@@ -1365,11 +1445,11 @@
                 <label>店員</label>
                 <input id="staffName" placeholder="例如 店員A" />
               </div>
+            </div>
 
-              <div class="form-row">
-                <label>備註</label>
-                <input id="walletNote" placeholder="例如 現金儲值 / 消費折抵" />
-              </div>
+            <div class="form-row">
+              <label>備註</label>
+              <input id="walletNote" placeholder="例如 現金儲值 / 消費折抵 / 退款調整" />
             </div>
 
             <div class="btn-row">
@@ -1385,32 +1465,44 @@
 
       const walletKeywordInput = document.getElementById('walletKeyword');
       if (walletKeywordInput) {
+        walletKeywordInput.focus();
+
         walletKeywordInput.addEventListener('keydown', function (event) {
           if (event.key === 'Enter') {
             event.preventDefault();
             findMemberFromInput('walletKeyword', 'walletMsg', 'walletMemberResult');
           }
         });
-      }
 
+        walletKeywordInput.addEventListener('input', function () {
+          clearTimeout(walletKeywordInput._scanTimer);
+
+          walletKeywordInput._scanTimer = setTimeout(function () {
+            const value = walletKeywordInput.value.trim();
+
+            if (value.length >= 8) {
+              findMemberFromInput('walletKeyword', 'walletMsg', 'walletMemberResult');
+            }
+          }, 450);
+        });
+      }
 
       document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
-    async function submitWallet() {
-      const msgId = 'walletMsg';
+    async     async function submitWallet() {
+      const msgId = document.getElementById('walletMsg') ? 'walletMsg' : 'scanMsg';
 
       if (!state.selectedMember) {
-        showMessage(msgId, '請先查詢會員。');
+        showMessage(msgId, '請先掃碼或查詢會員。');
         return;
       }
 
-      const target = 'storedValue';
       const type = document.getElementById('walletType').value;
       const rawAmount = Number(document.getElementById('walletAmount').value || 0);
 
       if (!rawAmount || rawAmount <= 0) {
-        showMessage(msgId, '請輸入正確的數量 / 金額。');
+        showMessage(msgId, '請輸入正確金額。');
         return;
       }
 
@@ -1420,7 +1512,6 @@
         memberId: state.selectedMember.memberId,
         barcodeValue: state.selectedMember.barcodeValue,
         amount,
-        points: amount,
         payMethod: document.getElementById('payMethod').value,
         staff: document.getElementById('staffName').value.trim(),
         note: document.getElementById('walletNote').value.trim(),
@@ -1431,12 +1522,25 @@
 
         state.selectedMember = data.member;
 
-        document.getElementById('walletMemberResult').innerHTML = renderSelectedMember(data.member);
+        const resultHtml = renderSelectedMember(data.member);
+
+        const scanResult = document.getElementById('scanMemberResult');
+        if (scanResult) {
+          scanResult.innerHTML = resultHtml;
+        }
+
+        const walletResult = document.getElementById('walletMemberResult');
+        if (walletResult) {
+          walletResult.innerHTML = resultHtml;
+        }
+
         document.getElementById('walletAmount').value = '';
         document.getElementById('walletNote').value = '';
 
-        showMessage(msgId, '已完成更新。
-目前儲值金：$' + money(data.member.storedValue));
+        showMessage(
+          msgId,
+          '已完成更新。\\n目前儲值金：$' + money(data.member.storedValue)
+        );
       } catch (err) {
         showMessage(msgId, err.message || String(err));
       }
