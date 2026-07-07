@@ -1035,6 +1035,23 @@
       el.classList.add('show');
     }
 
+
+    function preloadData() {
+      api('getDashboard')
+        .then((data) => {
+          state.members = data.members || [];
+          state.pointLogs = data.pointLogs || [];
+          state.walletLogs = data.walletLogs || [];
+
+          if (state.page === 'dashboard') {
+            renderDashboard();
+          }
+        })
+        .catch((err) => {
+          console.warn('preloadData failed', err);
+        });
+    }
+
     function render() {
       if (state.page === 'dashboard') renderDashboard();
       if (state.page === 'members') renderMembers();
@@ -1052,112 +1069,152 @@
       state.walletLogs = data.walletLogs || [];
     }
 
-    async function renderDashboard() {
+    function renderDashboard() {
       setTitle('總覽', '會員、儲值金與使用紀錄');
 
-      await loadAll();
+      const paint = () => {
+        const totalMembers = state.members.length;
+        const totalStoredValue = state.members.reduce((sum, m) => sum + Number(m.storedValue || 0), 0);
+        const totalSpend = state.members.reduce((sum, m) => sum + Number(m.totalSpend || 0), 0);
 
-      const totalMembers = state.members.length;
-      const totalPoints = state.members.reduce((sum, m) => sum + Number(m.points || 0), 0);
-      const totalStoredValue = state.members.reduce((sum, m) => sum + Number(m.storedValue || 0), 0);
-      const totalSpend = state.members.reduce((sum, m) => sum + Number(m.totalSpend || 0), 0);
+        document.getElementById('page').innerHTML = `
+          <div class="cards">
+            <div class="stat-card">
+              <div class="stat-label">會員總數</div>
+              <div class="stat-value">${money(totalMembers)}</div>
+            </div>
 
-      document.getElementById('page').innerHTML = `
-        <div class="cards">
-          <div class="stat-card">
-            <div class="stat-label">會員總數</div>
-            <div class="stat-value">${money(totalMembers)}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">儲值金餘額</div>
-            <div class="stat-value">$${money(totalStoredValue)}</div>
-          </div>
+            <div class="stat-card">
+              <div class="stat-label">儲值金餘額</div>
+              <div class="stat-value">$${money(totalStoredValue)}</div>
+            </div>
 
-          <div class="stat-card">
-            <div class="stat-label">累積消費</div>
-            <div class="stat-value">$${money(totalSpend)}</div>
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="panel">
-            <h2 class="panel-title">近期會員</h2>
-            ${renderMembersTable(state.members.slice(0, 6))}
+            <div class="stat-card">
+              <div class="stat-label">累積消費</div>
+              <div class="stat-value">$${money(totalSpend)}</div>
+            </div>
           </div>
 
-          <div class="panel">
-            <h2 class="panel-title">近期儲值金紀錄</h2>
-            ${renderPointLogsTable(state.pointLogs.slice(0, 6))}
+          <div class="grid-2">
+            <div class="panel">
+              <h2 class="panel-title">近期會員</h2>
+              ${renderMembersTable(state.members.slice(0, 6))}
+            </div>
+
+            <div class="panel">
+              <h2 class="panel-title">近期儲值金紀錄</h2>
+              ${renderWalletLogsTable(state.walletLogs.slice(0, 6))}
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      };
+
+      paint();
+
+      api('getDashboard')
+        .then((data) => {
+          state.members = data.members || [];
+          state.pointLogs = data.pointLogs || [];
+          state.walletLogs = data.walletLogs || [];
+
+          if (state.page === 'dashboard') {
+            paint();
+          }
+        })
+        .catch((err) => {
+          if (state.page === 'dashboard') {
+            document.getElementById('page').innerHTML = `
+              <div class="panel">
+                <h2 class="panel-title">讀取失敗</h2>
+                <div class="message show">${escapeHtml(err.message || String(err))}</div>
+              </div>
+            `;
+          }
+        });
     }
 
-    async function renderMembers() {
-      setTitle('會員清單', '查詢會員資料、儲值金、儲值金與標籤');
+    function renderMembers() {
+      setTitle('會員清單', '查詢會員資料、儲值金與標籤');
 
-      const data = await api('getMembers');
-      state.members = data.members || [];
+      const paint = () => {
+        document.getElementById('page').innerHTML = `
+          <div class="panel">
+            <h2 class="panel-title">會員搜尋</h2>
 
-      document.getElementById('page').innerHTML = `
-        <div class="panel">
-          <h2 class="panel-title">會員搜尋</h2>
+            <div class="form-grid">
+              <div class="form-row">
+                <label>關鍵字</label>
+                <input id="memberSearch" placeholder="姓名 / 電話 / 會員編號 / 標籤" />
+              </div>
 
-          <div class="form-grid">
-            <div class="form-row">
-              <label>關鍵字</label>
-              <input id="memberSearch" placeholder="姓名 / 電話 / 會員編號 / 標籤" />
+              <div class="form-row">
+                <label>會員等級</label>
+                <select id="memberLevelFilter">
+                  <option value="">全部</option>
+                  <option value="一般會員">一般會員</option>
+                  <option value="VIP">VIP</option>
+                </select>
+              </div>
             </div>
 
-            <div class="form-row">
-              <label>會員等級</label>
-              <select id="memberLevelFilter">
-                <option value="">全部</option>
-                <option value="一般會員">一般會員</option>
-                <option value="VIP">VIP</option>
-              </select>
+            <div class="btn-row">
+              <button class="btn" id="filterMembersBtn">查詢</button>
+              <button class="btn secondary" id="resetMembersBtn">重設</button>
             </div>
           </div>
 
-          <div class="btn-row">
-            <button class="btn" id="filterMembersBtn">查詢</button>
-            <button class="btn secondary" id="resetMembersBtn">重設</button>
+          <div class="panel">
+            <h2 class="panel-title">會員列表</h2>
+            <div id="membersTable">${renderMembersTable(state.members)}</div>
           </div>
-        </div>
+        `;
 
-        <div class="panel">
-          <h2 class="panel-title">會員列表</h2>
-          <div id="membersTable">${renderMembersTable(state.members)}</div>
-        </div>
-      `;
+        document.getElementById('filterMembersBtn').onclick = () => {
+          const keyword = document.getElementById('memberSearch').value.trim().toLowerCase();
+          const level = document.getElementById('memberLevelFilter').value;
 
-      document.getElementById('filterMembersBtn').onclick = () => {
-        const keyword = document.getElementById('memberSearch').value.trim().toLowerCase();
-        const level = document.getElementById('memberLevelFilter').value;
+          const filtered = state.members.filter((m) => {
+            const haystack = [
+              m.displayName,
+              m.phone,
+              m.memberId,
+              m.barcodeValue,
+              m.tags,
+            ].join(' ').toLowerCase();
 
-        const filtered = state.members.filter((m) => {
-          const haystack = [
-            m.displayName,
-            m.phone,
-            m.memberId,
-            m.barcodeValue,
-            m.tags,
-          ].join(' ').toLowerCase();
+            if (keyword && !haystack.includes(keyword)) return false;
+            if (level && m.level !== level) return false;
 
-          if (keyword && !haystack.includes(keyword)) return false;
-          if (level && m.level !== level) return false;
+            return true;
+          });
 
-          return true;
+          document.getElementById('membersTable').innerHTML = renderMembersTable(filtered);
+        };
+
+        document.getElementById('resetMembersBtn').onclick = () => {
+          document.getElementById('memberSearch').value = '';
+          document.getElementById('memberLevelFilter').value = '';
+          document.getElementById('membersTable').innerHTML = renderMembersTable(state.members);
+        };
+      };
+
+      paint();
+
+      api('getMembers')
+        .then((data) => {
+          state.members = data.members || [];
+
+          if (state.page === 'members') {
+            paint();
+          }
+        })
+        .catch((err) => {
+          if (state.page === 'members') {
+            document.getElementById('membersTable').innerHTML = `
+              <div class="message show">${escapeHtml(err.message || String(err))}</div>
+            `;
+          }
         });
-
-        document.getElementById('membersTable').innerHTML = renderMembersTable(filtered);
-      };
-
-      document.getElementById('resetMembersBtn').onclick = () => {
-        document.getElementById('memberSearch').value = '';
-        document.getElementById('memberLevelFilter').value = '';
-        document.getElementById('membersTable').innerHTML = renderMembersTable(state.members);
-      };
     }
 
     function renderMembersTable(list) {
@@ -1810,20 +1867,39 @@
       }
     }
 
-    async function renderLogs() {
+    function renderLogs() {
       setTitle('儲值金紀錄', '記錄每次儲值金儲值與使用');
 
-      const data = await api('getLogs');
+      const paint = () => {
+        document.getElementById('page').innerHTML = `
+          <div class="panel">
+            <h2 class="panel-title">儲值金紀錄</h2>
+            ${renderWalletLogsTable(state.walletLogs)}
+          </div>
+        `;
+      };
 
-      state.pointLogs = data.pointLogs || [];
-      state.walletLogs = data.walletLogs || [];
+      paint();
 
-      document.getElementById('page').innerHTML = `
-        <div class="panel">
-          <h2 class="panel-title">儲值金紀錄</h2>
-          ${renderWalletLogsTable(state.walletLogs)}
-        </div>
-      `;
+      api('getLogs')
+        .then((data) => {
+          state.pointLogs = data.pointLogs || [];
+          state.walletLogs = data.walletLogs || [];
+
+          if (state.page === 'logs') {
+            paint();
+          }
+        })
+        .catch((err) => {
+          if (state.page === 'logs') {
+            document.getElementById('page').innerHTML = `
+              <div class="panel">
+                <h2 class="panel-title">讀取失敗</h2>
+                <div class="message show">${escapeHtml(err.message || String(err))}</div>
+              </div>
+            `;
+          }
+        });
     }
 
     function renderPointLogsTable(list) {
@@ -1919,6 +1995,7 @@
     });
 
     render();
+    preloadData();
   </script>
 </body>
 </html>
