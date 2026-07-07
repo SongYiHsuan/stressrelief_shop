@@ -1740,6 +1740,8 @@
 
     async function submitWallet() {
       const msgId = document.getElementById('walletMsg') ? 'walletMsg' : 'scanMsg';
+      const submitBtn = document.getElementById('submitWalletBtn');
+      const originalText = submitBtn ? submitBtn.textContent : '確認送出';
 
       if (!state.selectedMember) {
         showMessage(msgId, '請先掃碼或查詢會員。');
@@ -1752,6 +1754,13 @@
       if (!rawAmount || rawAmount <= 0) {
         showMessage(msgId, '請輸入正確金額。');
         return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '送出中...';
+        submitBtn.style.opacity = '0.72';
+        submitBtn.style.cursor = 'not-allowed';
       }
 
       const amount = type === 'use' ? -rawAmount : rawAmount;
@@ -1787,10 +1796,17 @@
 
         showMessage(
           msgId,
-          '已完成更新。\\n目前儲值金：$' + money(data.member.storedValue)
+          '已完成更新。\n目前儲值金：$' + money(data.member.storedValue)
         );
       } catch (err) {
         showMessage(msgId, err.message || String(err));
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+          submitBtn.style.opacity = '';
+          submitBtn.style.cursor = '';
+        }
       }
     }
 
