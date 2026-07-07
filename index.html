@@ -657,6 +657,139 @@
       display: inline-flex;
     }
 
+
+    /* LINE style broadcast editor */
+    .line-editor-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) 360px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .message-type-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .message-type-tab {
+      border: 1px solid #d8dee6;
+      background: #fff;
+      color: #334155;
+      border-radius: 14px;
+      padding: 14px 10px;
+      font-weight: 950;
+      text-align: center;
+    }
+
+    .message-type-tab.active {
+      border-color: #06c755;
+      background: #ecfdf5;
+      color: #047857;
+      box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.12);
+    }
+
+    .phone-preview-wrap {
+      position: sticky;
+      top: 18px;
+    }
+
+    .phone-preview {
+      width: 320px;
+      min-height: 620px;
+      margin: 0 auto;
+      background: #8fb3df;
+      border: 12px solid #111;
+      border-radius: 38px;
+      overflow: hidden;
+      box-shadow: 0 22px 50px rgba(15, 23, 42, 0.22);
+    }
+
+    .phone-preview-header {
+      background: #f8fafc;
+      padding: 14px 16px;
+      font-weight: 950;
+      color: #111827;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .phone-preview-body {
+      padding: 18px 12px;
+    }
+
+    .line-bubble {
+      background: #fff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+    }
+
+    .line-bubble-img {
+      width: 100%;
+      height: 160px;
+      background: #e5e7eb;
+      display: grid;
+      place-items: center;
+      color: #64748b;
+      font-weight: 900;
+      overflow: hidden;
+    }
+
+    .line-bubble-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .line-bubble-content {
+      padding: 14px;
+    }
+
+    .line-bubble-title {
+      font-size: 18px;
+      font-weight: 950;
+      color: #111827;
+      margin-bottom: 7px;
+      line-height: 1.35;
+    }
+
+    .line-bubble-text {
+      color: #475569;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+
+    .line-bubble-button {
+      margin-top: 12px;
+      background: #06c755;
+      color: #fff;
+      text-align: center;
+      border-radius: 999px;
+      padding: 11px;
+      font-weight: 950;
+    }
+
+    .preview-note {
+      color: #64748b;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    @media (max-width: 1100px) {
+      .line-editor-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .phone-preview-wrap {
+        position: static;
+      }
+    }
+
   </style>
 </head>
 
@@ -1257,91 +1390,169 @@
     }
 
     function renderBroadcast() {
-      setTitle('發送內容', '依條件篩選會員，發送 LINE 圖文 / 文字訊息');
+      setTitle('發送內容', '對標 LINE 官方後台，可建立圖文訊息、優惠券、集點卡並預覽');
 
       document.getElementById('page').innerHTML = `
-        <div class="grid-2">
-          <div class="panel">
-            <h2 class="panel-title">發送內容</h2>
+        <div class="line-editor-grid">
+          <div>
+            <div class="panel">
+              <h2 class="panel-title">訊息項目</h2>
 
-            <div class="form-row">
-              <label>發送類型</label>
-              <select id="sendType">
-                <option value="text">純文字</option>
-                <option value="imageText">圖片 + 文字</option>
-                <option value="coupon">禮物券 / 優惠券</option>
-                <option value="activity">活動通知</option>
-              </select>
+              <div class="message-type-tabs">
+                <button class="message-type-tab active" data-send-type="imageText">圖文訊息</button>
+                <button class="message-type-tab" data-send-type="coupon">優惠券</button>
+                <button class="message-type-tab" data-send-type="stampCard">集點卡</button>
+              </div>
+
+              <input type="hidden" id="sendType" value="imageText" />
+
+              <div class="form-row">
+                <label>標題</label>
+                <input id="sendTitle" placeholder="例如：本週會員限定活動" />
+              </div>
+
+              <div class="form-row">
+                <label>內容</label>
+                <textarea id="sendContent" placeholder="輸入要發送給會員的內容"></textarea>
+              </div>
+
+              <div class="form-row">
+                <label>圖片網址，可不填</label>
+                <input id="sendImageUrl" placeholder="https://..." />
+              </div>
+
+              <div class="form-row">
+                <label>按鈕連結 / 優惠券網址 / 集點卡網址</label>
+                <input id="sendActionUrl" placeholder="https://lin.ee/... 或你的 LIFF / 優惠券頁網址" />
+              </div>
+
+              <div class="form-row">
+                <label>按鈕文字</label>
+                <input id="sendButtonLabel" placeholder="例如：立即查看" value="立即查看" />
+              </div>
             </div>
 
-            <div class="form-row">
-              <label>標題</label>
-              <input id="sendTitle" placeholder="例如：本週會員限定活動" />
-            </div>
-
-            <div class="form-row">
-              <label>內容</label>
-              <textarea id="sendContent" placeholder="輸入要發送給會員的內容"></textarea>
-            </div>
-
-            <div class="form-row">
-              <label>圖片網址，可不填</label>
-              <input id="sendImageUrl" placeholder="https://..." />
+            <div class="panel">
+              <h2 class="panel-title">預覽名單</h2>
+              <div id="broadcastPreview" class="muted">尚未預覽。</div>
             </div>
           </div>
 
-          <div class="panel">
-            <h2 class="panel-title">選擇條件</h2>
+          <div class="phone-preview-wrap">
+            <div class="panel">
+              <h2 class="panel-title">手機預覽</h2>
 
-            <div class="form-grid">
-              <div class="form-row">
-                <label>會員等級</label>
-                <select id="filterLevel">
-                  <option value="">全部</option>
-                  <option value="一般會員">一般會員</option>
-                  <option value="VIP">VIP</option>
-                </select>
+              <div class="phone-preview">
+                <div class="phone-preview-header">解憂藥局</div>
+                <div class="phone-preview-body" id="linePreview"></div>
               </div>
 
-              <div class="form-row">
-                <label>標籤包含</label>
-                <input id="filterTag" placeholder="例如 VIP / 新客 / 常客" />
-              </div>
-
-              <div class="form-row">
-                <label>最低儲值金</label>
-                <input id="filterMinPoints" type="number" placeholder="例如 100" />
-              </div>
-
-              <div class="form-row">
-                <label>最低累積消費</label>
-                <input id="filterMinSpend" type="number" placeholder="例如 3000" />
-              </div>
-
-              <div class="form-row">
-                <label>儲值金條件</label>
-                <select id="filterStoredValue">
-                  <option value="">全部</option>
-                  <option value="yes">有儲值餘額</option>
-                  <option value="no">沒有儲值餘額</option>
-                </select>
+              <div class="preview-note">
+                預覽為近似 LINE 顯示效果，實際畫面會依 LINE App 版本略有差異。
               </div>
             </div>
 
-            <div class="btn-row">
-              <button class="btn secondary" id="previewBroadcastBtn">預覽人數</button>
-              <button class="btn green" id="sendBroadcastBtn">確認發送</button>
-            </div>
+            <div class="panel">
+              <h2 class="panel-title">選擇條件</h2>
 
-            <div id="broadcastMsg" class="message"></div>
+              <div class="form-grid">
+                <div class="form-row">
+                  <label>會員等級</label>
+                  <select id="filterLevel">
+                    <option value="">全部</option>
+                    <option value="一般會員">一般會員</option>
+                    <option value="VIP">VIP</option>
+                    <option value="解憂藥局會員">解憂藥局會員</option>
+                  </select>
+                </div>
+
+                <div class="form-row">
+                  <label>標籤包含</label>
+                  <input id="filterTag" placeholder="例如 VIP / 新客 / 常客" />
+                </div>
+
+                <div class="form-row">
+                  <label>最低儲值金</label>
+                  <input id="filterMinStoredValue" type="number" placeholder="例如 100" />
+                </div>
+
+                <div class="form-row">
+                  <label>最低累積消費</label>
+                  <input id="filterMinSpend" type="number" placeholder="例如 3000" />
+                </div>
+
+                <div class="form-row">
+                  <label>儲值金條件</label>
+                  <select id="filterStoredValue">
+                    <option value="">全部</option>
+                    <option value="yes">有儲值餘額</option>
+                    <option value="no">沒有儲值餘額</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="btn-row">
+                <button class="btn secondary" id="previewBroadcastBtn">預覽人數</button>
+                <button class="btn green" id="sendBroadcastBtn">確認發送</button>
+              </div>
+
+              <div id="broadcastMsg" class="message"></div>
+            </div>
           </div>
-        </div>
-
-        <div class="panel">
-          <h2 class="panel-title">預覽名單</h2>
-          <div id="broadcastPreview" class="muted">尚未預覽。</div>
         </div>
       `;
+
+      const updatePreview = () => {
+        const preview = document.getElementById('linePreview');
+        if (!preview) return;
+
+        const payload = getBroadcastPayload();
+        const title = payload.title || getDefaultTitle(payload.sendType);
+        const content = payload.content || getDefaultContent(payload.sendType);
+        const imageUrl = payload.imageUrl;
+        const buttonLabel = payload.buttonLabel || getDefaultButtonLabel(payload.sendType);
+
+        preview.innerHTML = `
+          <div class="line-bubble">
+            <div class="line-bubble-img">
+              ${
+                imageUrl
+                  ? `<img src="${escapeHtml(imageUrl)}" alt="">`
+                  : `<span>${escapeHtml(getTypeLabel(payload.sendType))}</span>`
+              }
+            </div>
+
+            <div class="line-bubble-content">
+              <div class="line-bubble-title">${escapeHtml(title)}</div>
+              <div class="line-bubble-text">${escapeHtml(content)}</div>
+              <div class="line-bubble-button">${escapeHtml(buttonLabel)}</div>
+            </div>
+          </div>
+        `;
+      };
+
+      document.querySelectorAll('.message-type-tab').forEach((btn) => {
+        btn.onclick = () => {
+          document.querySelectorAll('.message-type-tab').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const type = btn.dataset.sendType;
+          document.getElementById('sendType').value = type;
+
+          document.getElementById('sendTitle').value = getDefaultTitle(type);
+          document.getElementById('sendContent').value = getDefaultContent(type);
+          document.getElementById('sendButtonLabel').value = getDefaultButtonLabel(type);
+
+          updatePreview();
+        };
+      });
+
+      ['sendTitle', 'sendContent', 'sendImageUrl', 'sendActionUrl', 'sendButtonLabel'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', updatePreview);
+        }
+      });
 
       document.getElementById('previewBroadcastBtn').onclick = async () => {
         const payload = getBroadcastPayload();
@@ -1350,7 +1561,6 @@
           const data = await api('previewBroadcast', payload);
 
           showMessage('broadcastMsg', '符合條件會員：' + data.count + ' 人');
-
           document.getElementById('broadcastPreview').innerHTML = renderMembersTable(data.members || []);
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
@@ -1365,13 +1575,53 @@
           return;
         }
 
+        const btn = document.getElementById('sendBroadcastBtn');
+        const oldText = btn.textContent;
+
         try {
+          btn.disabled = true;
+          btn.textContent = '發送中...';
+          btn.style.opacity = '0.72';
+
           const data = await api('sendBroadcast', payload);
-          showMessage('broadcastMsg', '已送出發送任務，預計發送：' + data.sentCount + ' 人');
+          showMessage('broadcastMsg', '已送出發送任務，成功發送：' + data.sentCount + ' 人');
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+          btn.style.opacity = '';
         }
       };
+
+      document.getElementById('sendTitle').value = getDefaultTitle('imageText');
+      document.getElementById('sendContent').value = getDefaultContent('imageText');
+      document.getElementById('sendButtonLabel').value = getDefaultButtonLabel('imageText');
+      updatePreview();
+    }
+
+    function getTypeLabel(type) {
+      if (type === 'coupon') return '優惠券';
+      if (type === 'stampCard') return '集點卡';
+      return '圖文訊息';
+    }
+
+    function getDefaultTitle(type) {
+      if (type === 'coupon') return '解憂藥局優惠券';
+      if (type === 'stampCard') return '解憂藥局集點卡';
+      return '解憂藥局會員通知';
+    }
+
+    function getDefaultContent(type) {
+      if (type === 'coupon') return '點擊下方按鈕查看本次優惠券。';
+      if (type === 'stampCard') return '點擊下方按鈕查看集點卡與集點狀態。';
+      return '這是一則會員專屬圖文訊息。';
+    }
+
+    function getDefaultButtonLabel(type) {
+      if (type === 'coupon') return '立即領取優惠券';
+      if (type === 'stampCard') return '查看集點卡';
+      return '查看詳情';
     }
 
     function getBroadcastPayload() {
@@ -1380,9 +1630,11 @@
         title: document.getElementById('sendTitle').value.trim(),
         content: document.getElementById('sendContent').value.trim(),
         imageUrl: document.getElementById('sendImageUrl').value.trim(),
+        actionUrl: document.getElementById('sendActionUrl').value.trim(),
+        buttonLabel: document.getElementById('sendButtonLabel').value.trim(),
         level: document.getElementById('filterLevel').value,
         tag: document.getElementById('filterTag').value.trim(),
-        minPoints: document.getElementById('filterMinPoints').value,
+        minStoredValue: document.getElementById('filterMinStoredValue').value,
         minSpend: document.getElementById('filterMinSpend').value,
         hasStoredValue: document.getElementById('filterStoredValue').value,
       };
