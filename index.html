@@ -643,6 +643,20 @@
       font-size: 14px !important;
     }
 
+
+    .query-loading {
+      display: none;
+      align-items: center;
+      color: #64748b;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 9px 4px;
+    }
+
+    .query-loading.show {
+      display: inline-flex;
+    }
+
   </style>
 </head>
 
@@ -1340,6 +1354,7 @@
 
                 <div class="btn-row">
                   <button class="btn green" id="findScanMemberBtn">查詢會員</button>
+                  <span class="query-loading" id="scanQueryLoading">查詢中...</span>
                 </div>              </div>
 
               <div id="scanMsg" class="message"></div>
@@ -1511,6 +1526,19 @@
         return;
       }
 
+      const loadingId = inputId === 'scanKeyword' ? 'scanQueryLoading' : 'walletQueryLoading';
+      const loadingEl = document.getElementById(loadingId);
+      const msgEl = document.getElementById(msgId);
+
+      if (loadingEl) {
+        loadingEl.classList.add('show');
+      }
+
+      if (msgEl) {
+        msgEl.textContent = '';
+        msgEl.classList.remove('show');
+      }
+
       try {
         const data = await api('findMember', {
           keyword,
@@ -1520,12 +1548,6 @@
 
         document.getElementById(resultId).innerHTML = renderSelectedMember(data.member);
 
-        const msgEl = document.getElementById(msgId);
-        if (msgEl) {
-          msgEl.textContent = '';
-          msgEl.classList.remove('show');
-        }
-
         if (input) {
           input.select();
         }
@@ -1533,6 +1555,10 @@
         state.selectedMember = null;
         document.getElementById(resultId).innerHTML = '<div class="muted">找不到會員。</div>';
         showMessage(msgId, err.message || String(err));
+      } finally {
+        if (loadingEl) {
+          loadingEl.classList.remove('show');
+        }
       }
     }
 
@@ -1621,6 +1647,7 @@
 
               <div class="btn-row">
                 <button class="btn green" id="findWalletMemberBtn">查詢會員</button>
+                <span class="query-loading" id="walletQueryLoading">查詢中...</span>
               </div>
 
               <div id="walletMsg" class="message"></div>
