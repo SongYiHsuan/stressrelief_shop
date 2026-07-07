@@ -472,7 +472,7 @@
         <button data-page="broadcast">📣 發送內容</button>
         <button data-page="scan">▣ 掃碼會員</button>
         <button data-page="wallet">💰 儲值 / 使用</button>
-        <button data-page="logs">🧾 點數紀錄</button>
+        <button data-page="logs">🧾 儲值紀錄</button>
       </nav>
     </aside>
 
@@ -480,7 +480,7 @@
       <div class="topbar">
         <div>
           <h1 class="page-title" id="pageTitle">總覽</h1>
-          <div class="page-desc" id="pageDesc">會員、點數、儲值與發送紀錄管理</div>
+          <div class="page-desc" id="pageDesc">會員、儲值金與發送紀錄管理</div>
         </div>
 
         <div class="status-pill" id="apiStatus">DEMO 模式</div>
@@ -851,7 +851,7 @@
     }
 
     async function renderDashboard() {
-      setTitle('總覽', '會員、點數、儲值與使用紀錄');
+      setTitle('總覽', '會員、儲值金與使用紀錄');
 
       await loadAll();
 
@@ -866,12 +866,6 @@
             <div class="stat-label">會員總數</div>
             <div class="stat-value">${money(totalMembers)}</div>
           </div>
-
-          <div class="stat-card">
-            <div class="stat-label">未使用點數</div>
-            <div class="stat-value">${money(totalPoints)}</div>
-          </div>
-
           <div class="stat-card">
             <div class="stat-label">儲值金餘額</div>
             <div class="stat-value">$${money(totalStoredValue)}</div>
@@ -890,7 +884,7 @@
           </div>
 
           <div class="panel">
-            <h2 class="panel-title">近期點數紀錄</h2>
+            <h2 class="panel-title">近期儲值金紀錄</h2>
             ${renderPointLogsTable(state.pointLogs.slice(0, 6))}
           </div>
         </div>
@@ -898,7 +892,7 @@
     }
 
     async function renderMembers() {
-      setTitle('會員清單', '查詢會員資料、點數、儲值金與標籤');
+      setTitle('會員清單', '查詢會員資料、儲值金、儲值金與標籤');
 
       const data = await api('getMembers');
       state.members = data.members || [];
@@ -977,7 +971,6 @@
                 <th>會員</th>
                 <th>電話</th>
                 <th>等級</th>
-                <th>點數</th>
                 <th>儲值金</th>
                 <th>累積消費</th>
                 <th>標籤</th>
@@ -993,7 +986,6 @@
                   </td>
                   <td>${escapeHtml(m.phone || '')}</td>
                   <td><span class="tag">${escapeHtml(m.level || '一般會員')}</span></td>
-                  <td>${money(m.points)}</td>
                   <td>$${money(m.storedValue)}</td>
                   <td>$${money(m.totalSpend)}</td>
                   <td>${String(m.tags || '').split(',').filter(Boolean).map((t) => `<span class="tag green">${escapeHtml(t.trim())}</span>`).join(' ')}</td>
@@ -1059,7 +1051,7 @@
               </div>
 
               <div class="form-row">
-                <label>最低點數</label>
+                <label>最低儲值金</label>
                 <input id="filterMinPoints" type="number" placeholder="例如 100" />
               </div>
 
@@ -1139,7 +1131,7 @@
     }
 
     function renderScan() {
-      setTitle('掃碼會員', '掃描會員 QR Code，快速查詢並處理點數');
+      setTitle('掃碼會員', '掃描會員 QR Code，快速查詢並處理儲值金');
 
       document.getElementById('page').innerHTML = `
         <div class="grid-2">
@@ -1161,7 +1153,7 @@
 
             <div class="form-row" style="margin-top:14px;">
               <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-              <input id="scanKeyword" placeholder="例如 XYYJ-C43A0EA9" />
+              <input id="scanKeyword" placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9" />
             </div>
 
             <div class="btn-row">
@@ -1181,6 +1173,17 @@
       document.getElementById('findScanMemberBtn').onclick = () => {
         findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
       };
+
+      const scanKeywordInput = document.getElementById('scanKeyword');
+      if (scanKeywordInput) {
+        scanKeywordInput.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
+          }
+        });
+      }
+
 
       document.getElementById('startScanBtn').onclick = startScanner;
       document.getElementById('stopScanBtn').onclick = stopScanner;
@@ -1292,7 +1295,6 @@
           <div class="member-meta">
             <div>電話：${escapeHtml(member.phone || '')}</div>
             <div>等級：${escapeHtml(member.level || '一般會員')}</div>
-            <div>儲值金：$${money(member.storedValue)}</div>
             <div>累積消費：$${money(member.totalSpend)}</div>
             <div>標籤：${escapeHtml(member.tags || '')}</div>
             <div>最後到訪：${escapeHtml(member.lastVisitAt || '')}</div>
@@ -1307,7 +1309,7 @@
     }
 
     function renderWallet() {
-      setTitle('儲值 / 使用', '處理會員點數與儲值金');
+      setTitle('儲值 / 使用', '處理會員儲值金');
 
       document.getElementById('page').innerHTML = `
         <div class="grid-2">
@@ -1316,7 +1318,7 @@
 
             <div class="form-row">
               <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-              <input id="walletKeyword" placeholder="例如 XYYJ-C43A0EA9" value="${escapeHtml(state.selectedMember?.memberId || '')}" />
+              <input id="walletKeyword" placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9" value="${escapeHtml(state.selectedMember?.memberId || '')}" />
             </div>
 
             <div class="btn-row">
@@ -1331,22 +1333,14 @@
           </div>
 
           <div class="panel">
-            <h2 class="panel-title">處理點數 / 儲值金</h2>
+            <h2 class="panel-title">處理儲值金</h2>
 
             <div class="form-grid">
               <div class="form-row">
-                <label>操作項目</label>
-                <select id="walletTarget">
-                  <option value="points">點數</option>
-                  <option value="storedValue">儲值金</option>
-                </select>
-              </div>
-
-              <div class="form-row">
                 <label>操作類型</label>
                 <select id="walletType">
-                  <option value="add">儲值 / 增加</option>
-                  <option value="use">使用 / 扣除</option>
+                  <option value="add">儲值</option>
+                  <option value="use">使用</option>
                 </select>
               </div>
 
@@ -1389,6 +1383,17 @@
         findMemberFromInput('walletKeyword', 'walletMsg', 'walletMemberResult');
       };
 
+      const walletKeywordInput = document.getElementById('walletKeyword');
+      if (walletKeywordInput) {
+        walletKeywordInput.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            findMemberFromInput('walletKeyword', 'walletMsg', 'walletMemberResult');
+          }
+        });
+      }
+
+
       document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
@@ -1400,7 +1405,7 @@
         return;
       }
 
-      const target = document.getElementById('walletTarget').value;
+      const target = 'storedValue';
       const type = document.getElementById('walletType').value;
       const rawAmount = Number(document.getElementById('walletAmount').value || 0);
 
@@ -1422,13 +1427,7 @@
       };
 
       try {
-        let data;
-
-        if (target === 'points') {
-          data = await api('adjustPoints', payload);
-        } else {
-          data = await api('adjustStoredValue', payload);
-        }
+        const data = await api('adjustStoredValue', payload);
 
         state.selectedMember = data.member;
 
@@ -1436,14 +1435,15 @@
         document.getElementById('walletAmount').value = '';
         document.getElementById('walletNote').value = '';
 
-        showMessage(msgId, '已完成更新。\n目前點數：' + money(data.member.points) + '\n儲值金：$' + money(data.member.storedValue));
+        showMessage(msgId, '已完成更新。
+目前儲值金：$' + money(data.member.storedValue));
       } catch (err) {
         showMessage(msgId, err.message || String(err));
       }
     }
 
     async function renderLogs() {
-      setTitle('點數紀錄', '記錄每次儲值、使用、扣點與儲值金異動');
+      setTitle('儲值金紀錄', '記錄每次儲值金儲值與使用');
 
       const data = await api('getLogs');
 
@@ -1451,11 +1451,6 @@
       state.walletLogs = data.walletLogs || [];
 
       document.getElementById('page').innerHTML = `
-        <div class="panel">
-          <h2 class="panel-title">點數紀錄</h2>
-          ${renderPointLogsTable(state.pointLogs)}
-        </div>
-
         <div class="panel">
           <h2 class="panel-title">儲值金紀錄</h2>
           ${renderWalletLogsTable(state.walletLogs)}
@@ -1465,7 +1460,7 @@
 
     function renderPointLogsTable(list) {
       if (!list.length) {
-        return `<div class="muted">目前沒有點數紀錄。</div>`;
+        return `<div class="muted">目前沒有儲值金紀錄。</div>`;
       }
 
       return `
@@ -1476,7 +1471,7 @@
                 <th>時間</th>
                 <th>會員</th>
                 <th>類型</th>
-                <th>異動點數</th>
+                <th>異動儲值金</th>
                 <th>異動前</th>
                 <th>異動後</th>
                 <th>店員</th>
