@@ -455,6 +455,97 @@
         flex-direction: column;
       }
     }
+
+    .scan-input-panel {
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .scan-input-title {
+      font-size: 18px;
+      font-weight: 950;
+      margin-bottom: 6px;
+    }
+
+    .scan-input-desc {
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 14px;
+      font-weight: 700;
+    }
+
+    .member-card.full {
+      background: #fff;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    .member-card.full .member-card-header {
+      border-bottom: 1px solid #eef0f2;
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+
+    .member-card.full .member-card-title {
+      font-size: 26px;
+      color: #111827;
+    }
+
+    .member-card.full .member-card-points {
+      background: #047857;
+      color: #fff;
+      font-size: 20px;
+      padding: 11px 16px;
+    }
+
+    .member-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .member-detail-item {
+      background: #f8fafc;
+      border: 1px solid #eef0f2;
+      border-radius: 14px;
+      padding: 11px 12px;
+    }
+
+    .member-detail-label {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+      margin-bottom: 5px;
+    }
+
+    .member-detail-value {
+      color: #111827;
+      font-size: 15px;
+      font-weight: 950;
+      word-break: break-word;
+    }
+
+    .member-detail-value.big {
+      font-size: 22px;
+      color: #047857;
+    }
+
+    .scan-help-box {
+      background: #ecfdf5;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      border-radius: 14px;
+      padding: 12px;
+      font-weight: 850;
+      line-height: 1.6;
+      margin-top: 12px;
+    }
+
   </style>
 </head>
 
@@ -1131,7 +1222,7 @@
     }
 
     function renderScan() {
-      setTitle('掃碼會員 / 儲值使用', '掃碼槍輸入後，左下角顯示會員資訊，右側處理儲值金');
+      setTitle('掃碼會員 / 儲值使用', '掃碼槍輸入後，左下角顯示完整會員資訊，右側處理儲值金');
 
       document.getElementById('page').innerHTML = `
         <div class="grid-2">
@@ -1139,29 +1230,30 @@
             <div class="panel">
               <h2 class="panel-title">掃碼槍 / 查詢會員</h2>
 
-              <div class="scanner-box">
-                <video id="scanVideo" playsinline></video>
-                <div class="scan-placeholder" id="scanPlaceholder">
-                  掃描槍請先點下面輸入框。<br />
-                  掃完會員 QR Code 後，系統會自動查詢會員。<br />
-                  如果掃描槍沒有自動查詢，請按 Enter。
+              <div class="scan-input-panel">
+                <div class="scan-input-title">請使用掃碼槍掃會員 QR Code</div>
+                <div class="scan-input-desc">
+                  點一下下方輸入框後，直接掃會員 QR Code。<br />
+                  掃描槍輸入完成後會自動查詢會員；若沒有自動查詢，按 Enter 即可。
                 </div>
-              </div>
 
-              <div class="form-row" style="margin-top:14px;">
-                <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-                <input
-                  id="scanKeyword"
-                  placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9"
-                  autocomplete="off"
-                  autofocus
-                />
-              </div>
+                <div class="form-row">
+                  <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
+                  <input
+                    id="scanKeyword"
+                    placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9"
+                    autocomplete="off"
+                    autofocus
+                  />
+                </div>
 
-              <div class="btn-row">
-                <button class="btn green" id="findScanMemberBtn">查詢會員</button>
-                <button class="btn secondary" id="startScanBtn">啟動相機掃描</button>
-                <button class="btn secondary" id="stopScanBtn">停止掃描</button>
+                <div class="btn-row">
+                  <button class="btn green" id="findScanMemberBtn">查詢會員</button>
+                </div>
+
+                <div class="scan-help-box">
+                  掃碼槍通常會像鍵盤一樣把會員編號打進輸入框。建議掃描槍設定結尾為 Enter / CR，查詢會更快。
+                </div>
               </div>
 
               <div id="scanMsg" class="message"></div>
@@ -1170,7 +1262,7 @@
             <div class="panel">
               <h2 class="panel-title">會員資訊</h2>
               <div id="scanMemberResult">
-                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員資料會顯示在這裡。</div>'}
+                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員完整資料會顯示在這裡。</div>'}
               </div>
             </div>
           </div>
@@ -1229,6 +1321,7 @@
       };
 
       const scanKeywordInput = document.getElementById('scanKeyword');
+
       if (scanKeywordInput) {
         scanKeywordInput.focus();
 
@@ -1252,8 +1345,6 @@
         });
       }
 
-      document.getElementById('startScanBtn').onclick = startScanner;
-      document.getElementById('stopScanBtn').onclick = stopScanner;
       document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
@@ -1356,22 +1447,67 @@
 
     function renderSelectedMember(member) {
       return `
-        <div class="member-card">
+        <div class="member-card full">
           <div class="member-card-header">
             <div>
-              <div class="member-card-title">${escapeHtml(member.displayName)}</div>
-              <div class="muted">${escapeHtml(member.memberId)}</div>
+              <div class="member-card-title">${escapeHtml(member.displayName || '未命名會員')}</div>
+              <div class="muted">會員編號：${escapeHtml(member.memberId || '')}</div>
+              <div class="muted">QR Code：${escapeHtml(member.barcodeValue || member.memberId || '')}</div>
             </div>
             <div class="member-card-points">$${money(member.storedValue)}</div>
           </div>
 
-          <div class="member-meta">
-            <div>電話：${escapeHtml(member.phone || '')}</div>
-            <div>等級：${escapeHtml(member.level || '一般會員')}</div>
-            <div>儲值金：$${money(member.storedValue)}</div>
-            <div>累積消費：$${money(member.totalSpend)}</div>
-            <div>標籤：${escapeHtml(member.tags || '')}</div>
-            <div>最後到訪：${escapeHtml(member.lastVisitAt || '')}</div>
+          <div class="member-detail-grid">
+            <div class="member-detail-item">
+              <div class="member-detail-label">目前儲值金</div>
+              <div class="member-detail-value big">$${money(member.storedValue)}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">累積消費</div>
+              <div class="member-detail-value">$${money(member.totalSpend)}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">電話</div>
+              <div class="member-detail-value">${escapeHtml(member.phone || '未填寫')}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">會員等級</div>
+              <div class="member-detail-value">${escapeHtml(member.level || '一般會員')}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">手機驗證</div>
+              <div class="member-detail-value">${member.phoneVerified ? '已驗證' : '未驗證'}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">最後到訪</div>
+              <div class="member-detail-value">${escapeHtml(member.lastVisitAt || '尚無紀錄')}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">建立時間</div>
+              <div class="member-detail-value">${escapeHtml(member.createdAt || '')}</div>
+            </div>
+
+            <div class="member-detail-item">
+              <div class="member-detail-label">更新時間</div>
+              <div class="member-detail-value">${escapeHtml(member.updatedAt || '')}</div>
+            </div>
+
+            <div class="member-detail-item" style="grid-column: 1 / -1;">
+              <div class="member-detail-label">標籤</div>
+              <div class="member-detail-value">
+                ${
+                  String(member.tags || '').trim()
+                    ? String(member.tags || '').split(',').filter(Boolean).map((t) => `<span class="tag green">${escapeHtml(t.trim())}</span>`).join(' ')
+                    : '尚無標籤'
+                }
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -1398,7 +1534,7 @@
               </div>
 
               <div class="btn-row">
-                <button class="btn" id="findWalletMemberBtn">查詢會員</button>
+                <button class="btn green" id="findWalletMemberBtn">查詢會員</button>
               </div>
 
               <div id="walletMsg" class="message"></div>
@@ -1407,7 +1543,7 @@
             <div class="panel">
               <h2 class="panel-title">會員資訊</h2>
               <div id="walletMemberResult">
-                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員資料會顯示在這裡。</div>'}
+                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員完整資料會顯示在這裡。</div>'}
               </div>
             </div>
           </div>
@@ -1464,6 +1600,7 @@
       };
 
       const walletKeywordInput = document.getElementById('walletKeyword');
+
       if (walletKeywordInput) {
         walletKeywordInput.focus();
 
@@ -1650,7 +1787,6 @@
 
     document.querySelectorAll('.nav button').forEach((btn) => {
       btn.onclick = () => {
-        stopScanner();
         setPage(btn.dataset.page);
       };
     });
