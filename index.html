@@ -1325,7 +1325,7 @@
       }
     }
 
-    async     async function findMemberFromInput(inputId, msgId, resultId) {
+    async function findMemberFromInput(inputId, msgId, resultId) {
       const input = document.getElementById(inputId);
       const keyword = input.value.trim();
 
@@ -1490,7 +1490,7 @@
       document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
-    async     async function submitWallet() {
+    async function submitWallet() {
       const msgId = document.getElementById('walletMsg') ? 'walletMsg' : 'scanMsg';
 
       if (!state.selectedMember) {
