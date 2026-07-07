@@ -672,7 +672,6 @@
         <button class="active" data-page="dashboard">📊 總覽</button>
         <button data-page="members">👥 會員清單</button>
         <button data-page="broadcast">📣 發送內容</button>
-        <button data-page="scan">▣ 掃碼 / 儲值</button>
         <button data-page="wallet">💰 儲值頁面</button>
         <button data-page="logs">🧾 儲值紀錄</button>
       </nav>
@@ -1013,6 +1012,7 @@
     }
 
     function setPage(page) {
+      if (page === 'scan') page = 'wallet';
       state.page = page;
 
       document.querySelectorAll('.nav button').forEach((btn) => {
@@ -1056,7 +1056,6 @@
       if (state.page === 'dashboard') renderDashboard();
       if (state.page === 'members') renderMembers();
       if (state.page === 'broadcast') renderBroadcast();
-      if (state.page === 'scan') renderScan();
       if (state.page === 'wallet') renderWallet();
       if (state.page === 'logs') renderLogs();
     }
@@ -1389,189 +1388,11 @@
       };
     }
 
-    function renderScan() {
-      setTitle('掃碼會員 / 儲值使用', '掃碼後顯示會員資訊，右側處理儲值金');
 
-      document.getElementById('page').innerHTML = `
-        <div class="grid-2">
-          <div>
-            <div class="panel">
-              <h2 class="panel-title">掃碼槍 / 查詢會員</h2>
 
-              <div class="scan-input-panel">
-                <div class="form-row">
-                  <label>會員編號 / QR Code 內容 / 電話 / 姓名</label>
-                  <input
-                    id="scanKeyword"
-                    placeholder="掃描會員 QR Code 或輸入 XYYJ-C43A0EA9"
-                    autocomplete="off"
-                    autofocus
-                  />
-                </div>
 
-                <div class="btn-row">
-                  <button class="btn green" id="findScanMemberBtn">查詢會員</button>
-                  <span class="query-loading" id="scanQueryLoading">查詢中...</span>
-                </div>              </div>
 
-              <div id="scanMsg" class="message"></div>
-            </div>
 
-            <div class="panel">
-              <h2 class="panel-title">會員資訊</h2>
-              <div id="scanMemberResult">
-                ${state.selectedMember ? renderSelectedMember(state.selectedMember) : '<div class="muted">尚未選擇會員。掃碼或查詢後，會員完整資料會顯示在這裡。</div>'}
-              </div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <h2 class="panel-title">儲值金處理</h2>
-
-            <div class="form-grid">
-              <div class="form-row">
-                <label>操作類型</label>
-                <select id="walletType">
-                  <option value="add">儲值</option>
-                  <option value="use">使用</option>
-                </select>
-              </div>
-
-              <div class="form-row">
-                <label>金額</label>
-                <input id="walletAmount" type="number" placeholder="例如 500" inputmode="numeric" />
-              </div>
-
-              <div class="form-row">
-                <label>付款方式</label>
-                <select id="payMethod">
-                  <option value="">不指定</option>
-                  <option value="現金">現金</option>
-                  <option value="轉帳">轉帳</option>
-                  <option value="刷卡">刷卡</option>
-                  <option value="Line Pay">Line Pay</option>
-                </select>
-              </div>
-
-              <div class="form-row">
-                <label>店員</label>
-                <input id="staffName" placeholder="例如 店員A" />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <label>備註</label>
-              <input id="walletNote" placeholder="例如 現金儲值 / 消費折抵 / 退款調整" />
-            </div>
-
-            <div class="btn-row">
-              <button class="btn green" id="submitWalletBtn">確認送出</button>
-            </div>
-
-            <div id="walletMsg" class="message"></div>
-          </div>
-        </div>
-      `;
-
-      document.getElementById('findScanMemberBtn').onclick = () => {
-        findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
-      };
-
-      const scanKeywordInput = document.getElementById('scanKeyword');
-
-      if (scanKeywordInput) {
-        scanKeywordInput.focus();
-
-        scanKeywordInput.addEventListener('keydown', function (event) {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
-          }
-        });
-
-        scanKeywordInput.addEventListener('input', function () {
-          clearTimeout(scanKeywordInput._scanTimer);
-
-          scanKeywordInput._scanTimer = setTimeout(function () {
-            const value = scanKeywordInput.value.trim();
-
-            if (value.length >= 8) {
-              findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
-            }
-          }, 450);
-        });
-      }
-
-      document.getElementById('submitWalletBtn').onclick = submitWallet;
-    }
-
-    async function startScanner() {
-      const video = document.getElementById('scanVideo');
-      const placeholder = document.getElementById('scanPlaceholder');
-
-      if (!('BarcodeDetector' in window)) {
-        showMessage('scanMsg', '此瀏覽器不支援 BarcodeDetector，請直接輸入會員編號。');
-        return;
-      }
-
-      try {
-        state.scannerStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-          },
-        });
-
-        video.srcObject = state.scannerStream;
-        video.classList.add('active');
-        placeholder.style.display = 'none';
-        await video.play();
-
-        const detector = new BarcodeDetector({
-          formats: ['qr_code', 'code_128'],
-        });
-
-        state.scanTimer = setInterval(async () => {
-          try {
-            const codes = await detector.detect(video);
-
-            if (codes.length) {
-              const value = codes[0].rawValue || '';
-              document.getElementById('scanKeyword').value = value;
-              stopScanner();
-              findMemberFromInput('scanKeyword', 'scanMsg', 'scanMemberResult');
-            }
-          } catch (err) {
-            console.warn(err);
-          }
-        }, 600);
-      } catch (err) {
-        showMessage('scanMsg', '相機啟動失敗：' + (err.message || String(err)));
-      }
-    }
-
-    function stopScanner() {
-      if (state.scanTimer) {
-        clearInterval(state.scanTimer);
-        state.scanTimer = null;
-      }
-
-      if (state.scannerStream) {
-        state.scannerStream.getTracks().forEach((track) => track.stop());
-        state.scannerStream = null;
-      }
-
-      const video = document.getElementById('scanVideo');
-      const placeholder = document.getElementById('scanPlaceholder');
-
-      if (video) {
-        video.classList.remove('active');
-        video.srcObject = null;
-      }
-
-      if (placeholder) {
-        placeholder.style.display = 'block';
-      }
-    }
 
     async function findMemberFromInput(inputId, msgId, resultId) {
       const input = document.getElementById(inputId);
