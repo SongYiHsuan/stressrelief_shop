@@ -790,6 +790,20 @@
       }
     }
 
+  
+    .broadcast-filter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px 24px;
+      align-items: end;
+    }
+
+    @media (max-width: 720px) {
+      .broadcast-filter-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
   </style>
 </head>
 
@@ -1529,17 +1543,7 @@
             <div class="panel">
               <h2 class="panel-title">選擇條件</h2>
 
-              <div class="form-grid">
-                <div class="form-row">
-                  <label>會員等級</label>
-                  <select id="filterLevel">
-                    <option value="">全部</option>
-                    <option value="一般會員">一般會員</option>
-                    <option value="VIP">VIP</option>
-                    <option value="解憂藥局會員">解憂藥局會員</option>
-                  </select>
-                </div>
-
+              <div class="form-grid broadcast-filter-grid">
                 <div class="form-row">
                   <label>會員標籤</label>
                   <select id="filterTag">
@@ -1760,7 +1764,7 @@
         couponAmount: document.getElementById('couponAmount') ? document.getElementById('couponAmount').value : '',
         couponStartDate: document.getElementById('couponStartDate') ? document.getElementById('couponStartDate').value : '',
         couponEndDate: document.getElementById('couponEndDate') ? document.getElementById('couponEndDate').value : '',
-        level: document.getElementById('filterLevel').value,
+        level: '',
         tag: document.getElementById('filterTag').value,
         minStoredValue: document.getElementById('filterMinStoredValue').value,
         minSpend: document.getElementById('filterMinSpend').value,
