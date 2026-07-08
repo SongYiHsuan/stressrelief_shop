@@ -1407,12 +1407,12 @@
               <input type="hidden" id="sendType" value="imageText" />
 
               <div class="form-row">
-                <label>標題</label>
+                <label id="sendTitleLabel">標題</label>
                 <input id="sendTitle" placeholder="例如：本週會員限定活動" />
               </div>
 
               <div class="form-row">
-                <label>內容</label>
+                <label id="sendContentLabel">內容</label>
                 <textarea id="sendContent" placeholder="輸入要發送給會員的內容"></textarea>
               </div>
 
@@ -1421,14 +1421,26 @@
                 <input id="sendImageUrl" placeholder="https://..." />
               </div>
 
-              <div class="form-row">
-                <label>按鈕連結 / 優惠券網址 / 集點卡網址</label>
-                <input id="sendActionUrl" placeholder="https://lin.ee/... 或你的 LIFF / 優惠券頁網址" />
+              <div class="form-row" id="actionUrlRow">
+                <label id="sendActionUrlLabel">按鈕連結</label>
+                <input id="sendActionUrl" placeholder="https://..." />
               </div>
 
-              <div class="form-row">
+              <div class="form-row" id="buttonLabelRow">
                 <label>按鈕文字</label>
                 <input id="sendButtonLabel" placeholder="例如：立即查看" value="立即查看" />
+              </div>
+
+              <div class="form-grid" id="couponSettingRows" style="display:none;">
+                <div class="form-row">
+                  <label>折抵金額</label>
+                  <input id="couponAmount" type="number" placeholder="例如 100" inputmode="numeric" />
+                </div>
+
+                <div class="form-row">
+                  <label>有效天數</label>
+                  <input id="couponValidDays" type="number" placeholder="例如 30" inputmode="numeric" />
+                </div>
               </div>
             </div>
 
@@ -1531,6 +1543,43 @@
         `;
       };
 
+      const setBroadcastFieldVisibility = (type) => {
+        const titleLabel = document.getElementById('sendTitleLabel');
+        const contentLabel = document.getElementById('sendContentLabel');
+        const actionUrlRow = document.getElementById('actionUrlRow');
+        const actionUrlLabel = document.getElementById('sendActionUrlLabel');
+        const buttonLabelRow = document.getElementById('buttonLabelRow');
+        const couponSettingRows = document.getElementById('couponSettingRows');
+        const actionUrlInput = document.getElementById('sendActionUrl');
+
+        if (!titleLabel || !contentLabel) return;
+
+        if (type === 'coupon') {
+          titleLabel.textContent = '優惠券名稱';
+          contentLabel.textContent = '優惠券說明';
+          actionUrlRow.style.display = 'none';
+          buttonLabelRow.style.display = 'none';
+          couponSettingRows.style.display = 'grid';
+          if (actionUrlInput) actionUrlInput.value = '';
+        } else if (type === 'stampCard') {
+          titleLabel.textContent = '集點卡標題';
+          contentLabel.textContent = '集點卡說明';
+          actionUrlRow.style.display = '';
+          actionUrlLabel.textContent = '集點卡網址';
+          actionUrlInput.placeholder = 'https://... 或 LIFF 集點卡網址';
+          buttonLabelRow.style.display = '';
+          couponSettingRows.style.display = 'none';
+        } else {
+          titleLabel.textContent = '標題';
+          contentLabel.textContent = '內容';
+          actionUrlRow.style.display = '';
+          actionUrlLabel.textContent = '按鈕連結，可不填';
+          actionUrlInput.placeholder = 'https://...';
+          buttonLabelRow.style.display = '';
+          couponSettingRows.style.display = 'none';
+        }
+      };
+
       document.querySelectorAll('.message-type-tab').forEach((btn) => {
         btn.onclick = () => {
           document.querySelectorAll('.message-type-tab').forEach((b) => b.classList.remove('active'));
@@ -1543,11 +1592,12 @@
           document.getElementById('sendContent').value = getDefaultContent(type);
           document.getElementById('sendButtonLabel').value = getDefaultButtonLabel(type);
 
+          setBroadcastFieldVisibility(type);
           updatePreview();
         };
       });
 
-      ['sendTitle', 'sendContent', 'sendImageUrl', 'sendActionUrl', 'sendButtonLabel'].forEach((id) => {
+      ['sendTitle', 'sendContent', 'sendImageUrl', 'sendActionUrl', 'sendButtonLabel', 'couponAmount', 'couponValidDays'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
           el.addEventListener('input', updatePreview);
@@ -1597,6 +1647,7 @@
       document.getElementById('sendTitle').value = getDefaultTitle('imageText');
       document.getElementById('sendContent').value = getDefaultContent('imageText');
       document.getElementById('sendButtonLabel').value = getDefaultButtonLabel('imageText');
+      setBroadcastFieldVisibility('imageText');
       updatePreview();
     }
 
@@ -1632,6 +1683,8 @@
         imageUrl: document.getElementById('sendImageUrl').value.trim(),
         actionUrl: document.getElementById('sendActionUrl').value.trim(),
         buttonLabel: document.getElementById('sendButtonLabel').value.trim(),
+        couponAmount: document.getElementById('couponAmount') ? document.getElementById('couponAmount').value : '',
+        couponValidDays: document.getElementById('couponValidDays') ? document.getElementById('couponValidDays').value : '',
         level: document.getElementById('filterLevel').value,
         tag: document.getElementById('filterTag').value.trim(),
         minStoredValue: document.getElementById('filterMinStoredValue').value,
