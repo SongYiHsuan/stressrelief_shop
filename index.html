@@ -828,6 +828,7 @@
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbz8XxZE2-IKp6pzW8RutQJjO_kiQU--Q0_n5Z_SOzyT43QbvgxRdKj4eAsQGc7O2TQeXQ/exec';
     const ADMIN_PIN = '9753';
     const DEMO_MODE = !GAS_API_URL;
+    const MEMBER_TAG_OPTIONS = ['', 'VIP', '新客', '常客', '老客'];
 
     const state = {
       page: 'dashboard',
@@ -1349,6 +1350,63 @@
         });
     }
 
+    function renderMemberTagSelect(member) {
+      const currentTag = String(member.tags || '').split(',')[0].trim();
+
+      return `
+        <select
+          class="member-tag-select"
+          data-member-id="${escapeHtml(member.memberId)}"
+          onchange="updateMemberTagFromSelect(this)"
+        >
+          ${MEMBER_TAG_OPTIONS.map((tag) => `
+            <option value="${escapeHtml(tag)}" ${tag === currentTag ? 'selected' : ''}>
+              ${tag ? escapeHtml(tag) : '無標籤'}
+            </option>
+          `).join('')}
+        </select>
+      `;
+    }
+
+    async function updateMemberTagFromSelect(selectEl) {
+      const memberId = selectEl.dataset.memberId;
+      const tags = selectEl.value;
+      const oldValue = selectEl.dataset.oldValue || '';
+
+      try {
+        selectEl.disabled = true;
+
+        const data = await api('updateMemberTags', {
+          memberId,
+          tags,
+        });
+
+        const updatedMember = data.member;
+
+        state.members = state.members.map((member) => {
+          if (String(member.memberId) === String(memberId)) {
+            return {
+              ...member,
+              tags: updatedMember.tags || tags,
+              updatedAt: updatedMember.updatedAt || member.updatedAt,
+            };
+          }
+
+          return member;
+        });
+
+        selectEl.dataset.oldValue = tags;
+        selectEl.disabled = false;
+
+        const label = tags || '無標籤';
+        alert('已更新會員標籤：' + label);
+      } catch (err) {
+        selectEl.disabled = false;
+        selectEl.value = oldValue;
+        alert(err.message || String(err));
+      }
+    }
+
     function renderMembersTable(list) {
       if (!list.length) {
         return `<div class="muted">目前沒有會員資料。</div>`;
@@ -1379,7 +1437,7 @@
                   <td><span class="tag">${escapeHtml(m.level || '一般會員')}</span></td>
                   <td>$${money(m.storedValue)}</td>
                   <td>$${money(m.totalSpend)}</td>
-                  <td>${String(m.tags || '').split(',').filter(Boolean).map((t) => `<span class="tag green">${escapeHtml(t.trim())}</span>`).join(' ')}</td>
+                  <td>${renderMemberTagSelect(m)}</td>
                   <td>${escapeHtml(m.lastVisitAt || '')}</td>
                 </tr>
               `).join('')}
@@ -1483,8 +1541,14 @@
                 </div>
 
                 <div class="form-row">
-                  <label>標籤包含</label>
-                  <input id="filterTag" placeholder="例如 VIP / 新客 / 常客" />
+                  <label>會員標籤</label>
+                  <select id="filterTag">
+                    <option value="">全部</option>
+                    <option value="VIP">VIP</option>
+                    <option value="新客">新客</option>
+                    <option value="常客">常客</option>
+                    <option value="老客">老客</option>
+                  </select>
                 </div>
 
                 <div class="form-row">
@@ -1697,7 +1761,7 @@
         couponStartDate: document.getElementById('couponStartDate') ? document.getElementById('couponStartDate').value : '',
         couponEndDate: document.getElementById('couponEndDate') ? document.getElementById('couponEndDate').value : '',
         level: document.getElementById('filterLevel').value,
-        tag: document.getElementById('filterTag').value.trim(),
+        tag: document.getElementById('filterTag').value,
         minStoredValue: document.getElementById('filterMinStoredValue').value,
         minSpend: document.getElementById('filterMinSpend').value,
         hasStoredValue: document.getElementById('filterStoredValue').value,
