@@ -1390,7 +1390,7 @@
     }
 
     function renderBroadcast() {
-      setTitle('發送內容', '對標 LINE 官方後台，可建立圖文訊息、優惠券、集點卡並預覽');
+      setTitle('發送內容', '對標 LINE 官方後台，可建立圖文訊息、優惠券並預覽');
 
       document.getElementById('page').innerHTML = `
         <div class="line-editor-grid">
@@ -1401,7 +1401,6 @@
               <div class="message-type-tabs">
                 <button class="message-type-tab active" data-send-type="imageText">圖文訊息</button>
                 <button class="message-type-tab" data-send-type="coupon">優惠券</button>
-                <button class="message-type-tab" data-send-type="stampCard">集點卡</button>
               </div>
 
               <input type="hidden" id="sendType" value="imageText" />
@@ -1566,14 +1565,6 @@
           buttonLabelRow.style.display = 'none';
           couponSettingRows.style.display = 'grid';
           if (actionUrlInput) actionUrlInput.value = '';
-        } else if (type === 'stampCard') {
-          titleLabel.textContent = '集點卡標題';
-          contentLabel.textContent = '集點卡說明';
-          actionUrlRow.style.display = '';
-          actionUrlLabel.textContent = '集點卡網址';
-          actionUrlInput.placeholder = 'https://... 或 LIFF 集點卡網址';
-          buttonLabelRow.style.display = '';
-          couponSettingRows.style.display = 'none';
         } else {
           titleLabel.textContent = '標題';
           contentLabel.textContent = '內容';
@@ -1611,14 +1602,32 @@
 
       document.getElementById('previewBroadcastBtn').onclick = async () => {
         const payload = getBroadcastPayload();
+        const btn = document.getElementById('previewBroadcastBtn');
+        const oldText = btn.textContent;
+        const previewEl = document.getElementById('broadcastPreview');
 
         try {
+          btn.disabled = true;
+          btn.textContent = '查詢中...';
+          btn.style.opacity = '0.72';
+
+          if (previewEl) {
+            previewEl.innerHTML = '<div class="muted">查詢中...</div>';
+          }
+
           const data = await api('previewBroadcast', payload);
 
           showMessage('broadcastMsg', '符合條件會員：' + data.count + ' 人');
-          document.getElementById('broadcastPreview').innerHTML = renderMembersTable(data.members || []);
+
+          if (previewEl) {
+            previewEl.innerHTML = renderMembersTable(data.members || []);
+          }
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+          btn.style.opacity = '';
         }
       };
 
@@ -1658,25 +1667,21 @@
 
     function getTypeLabel(type) {
       if (type === 'coupon') return '優惠券';
-      if (type === 'stampCard') return '集點卡';
       return '圖文訊息';
     }
 
     function getDefaultTitle(type) {
       if (type === 'coupon') return '解憂藥局優惠券';
-      if (type === 'stampCard') return '解憂藥局集點卡';
       return '解憂藥局會員通知';
     }
 
     function getDefaultContent(type) {
       if (type === 'coupon') return '點擊下方按鈕查看本次優惠券。';
-      if (type === 'stampCard') return '點擊下方按鈕查看集點卡與集點狀態。';
       return '這是一則會員專屬圖文訊息。';
     }
 
     function getDefaultButtonLabel(type) {
       if (type === 'coupon') return '立即領取優惠券';
-      if (type === 'stampCard') return '查看集點卡';
       return '查看詳情';
     }
 
