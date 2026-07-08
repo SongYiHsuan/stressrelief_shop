@@ -1438,8 +1438,13 @@
                 </div>
 
                 <div class="form-row">
-                  <label>有效天數</label>
-                  <input id="couponValidDays" type="number" placeholder="例如 30" inputmode="numeric" />
+                  <label>開始日期</label>
+                  <input id="couponStartDate" type="date" />
+                </div>
+
+                <div class="form-row">
+                  <label>結束日期</label>
+                  <input id="couponEndDate" type="date" />
                 </div>
               </div>
             </div>
@@ -1597,7 +1602,7 @@
         };
       });
 
-      ['sendTitle', 'sendContent', 'sendImageUrl', 'sendActionUrl', 'sendButtonLabel', 'couponAmount', 'couponValidDays'].forEach((id) => {
+      ['sendTitle', 'sendContent', 'sendImageUrl', 'sendActionUrl', 'sendButtonLabel', 'couponAmount', 'couponStartDate', 'couponEndDate'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) {
           el.addEventListener('input', updatePreview);
@@ -1684,7 +1689,8 @@
         actionUrl: document.getElementById('sendActionUrl').value.trim(),
         buttonLabel: document.getElementById('sendButtonLabel').value.trim(),
         couponAmount: document.getElementById('couponAmount') ? document.getElementById('couponAmount').value : '',
-        couponValidDays: document.getElementById('couponValidDays') ? document.getElementById('couponValidDays').value : '',
+        couponStartDate: document.getElementById('couponStartDate') ? document.getElementById('couponStartDate').value : '',
+        couponEndDate: document.getElementById('couponEndDate') ? document.getElementById('couponEndDate').value : '',
         level: document.getElementById('filterLevel').value,
         tag: document.getElementById('filterTag').value.trim(),
         minStoredValue: document.getElementById('filterMinStoredValue').value,
