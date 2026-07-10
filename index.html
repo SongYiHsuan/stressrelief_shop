@@ -1997,6 +1997,29 @@
         });
       }
 
+      function syncWalletPayMethod() {
+        const walletType = document.getElementById('walletType');
+        const payMethod = document.getElementById('payMethod');
+
+        if (!walletType || !payMethod) {
+          return;
+        }
+
+        if (walletType.value === 'use') {
+          payMethod.value = '儲值金';
+          payMethod.disabled = true;
+        } else {
+          payMethod.disabled = false;
+
+          if (payMethod.value === '儲值金') {
+            payMethod.value = '';
+          }
+        }
+      }
+
+      document.getElementById('walletType').onchange = syncWalletPayMethod;
+      syncWalletPayMethod();
+
       document.getElementById('submitWalletBtn').onclick = submitWallet;
     }
 
@@ -2031,7 +2054,7 @@
         memberId: state.selectedMember.memberId,
         barcodeValue: state.selectedMember.barcodeValue,
         amount,
-        payMethod: document.getElementById('payMethod').value,
+        payMethod: type === 'use' ? '儲值金' : document.getElementById('payMethod').value,
         staff: document.getElementById('staffName').value.trim(),
         note: document.getElementById('walletNote').value.trim(),
       };
