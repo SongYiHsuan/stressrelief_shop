@@ -973,6 +973,24 @@
       }
     }
 
+  
+    /* ===== 登入頁改成覆蓋層，不破壞後台主框架 ===== */
+
+    .admin-login-page {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 99999 !important;
+      min-height: 100vh !important;
+      display: grid !important;
+      place-items: center !important;
+      padding: 24px !important;
+      background: linear-gradient(135deg, #f8fafc, #eef2f7) !important;
+    }
+
+    .admin-login-page.is-hidden {
+      display: none !important;
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
@@ -1488,18 +1506,26 @@ const ADMIN_PIN = '9753';
     }
 
     function setTitle(title, desc) {
-      document.getElementById('pageTitle').textContent = title;
-      document.getElementById('pageDesc').textContent = desc;
+      const titleEl = document.getElementById('pageTitle');
+      const descEl = document.getElementById('pageDesc');
+      const statusEl = document.getElementById('apiStatus');
 
-      const status = document.getElementById('apiStatus');
-      const storeName = state.adminProfile && state.adminProfile.storeName
-        ? state.adminProfile.storeName
-        : '';
+      if (titleEl) {
+        titleEl.textContent = title;
+      }
 
-      if (status) {
-        status.textContent = state.lastRefreshAt
-          ? (storeName ? storeName + '｜已更新 ' + state.lastRefreshAt : '已更新 ' + state.lastRefreshAt)
-          : (storeName ? storeName + '｜已連線 GAS' : '已連線 GAS');
+      if (descEl) {
+        descEl.textContent = desc;
+      }
+
+      if (statusEl) {
+        const storeName = state.adminProfile && state.adminProfile.storeName
+          ? state.adminProfile.storeName
+          : '';
+
+        statusEl.textContent = storeName
+          ? storeName + '｜已連線 GAS'
+          : '已連線 GAS';
       }
     }
 
@@ -1528,6 +1554,14 @@ const ADMIN_PIN = '9753';
     }
 
     
+    function removeAdminLoginPage() {
+      const loginPage = document.getElementById('adminLoginPage');
+
+      if (loginPage) {
+        loginPage.remove();
+      }
+    }
+
     function withTimeout(promise, ms, message) {
       let timer;
 
@@ -1545,25 +1579,29 @@ const ADMIN_PIN = '9753';
     function renderAdminLoginPage(message = '') {
       document.body.classList.remove('modal-open');
 
-      const root = document.getElementById('app') || document.querySelector('#root') || document.body;
+      removeAdminLoginPage();
 
-      root.innerHTML = `
-        <div class="admin-login-page">
-          <form class="admin-login-card" id="adminLoginForm">
-            <h1>解憂藥局後台登入</h1>
+      const loginPage = document.createElement('div');
+      loginPage.id = 'adminLoginPage';
+      loginPage.className = 'admin-login-page';
 
-            <label for="adminEmail">帳號 Email</label>
-            <input id="adminEmail" type="email" autocomplete="username" placeholder="xxx@gmail.com" required />
+      loginPage.innerHTML = `
+        <form class="admin-login-card" id="adminLoginForm">
+          <h1>解憂藥局後台登入</h1>
 
-            <label for="adminPassword">密碼</label>
-            <input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼" required />
+          <label for="adminEmail">帳號 Email</label>
+          <input id="adminEmail" type="email" autocomplete="username" placeholder="xxx@gmail.com" required />
 
-            <button id="adminLoginBtn" type="submit">登入後台</button>
+          <label for="adminPassword">密碼</label>
+          <input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼" required />
 
-            <div class="admin-login-error" id="adminLoginError">${escapeHtml(message)}</div>
-          </form>
-        </div>
+          <button id="adminLoginBtn" type="submit">登入後台</button>
+
+          <div class="admin-login-error" id="adminLoginError">${escapeHtml(message)}</div>
+        </form>
       `;
+
+      document.body.appendChild(loginPage);
 
       const form = document.getElementById('adminLoginForm');
       const btn = document.getElementById('adminLoginBtn');
@@ -1606,6 +1644,7 @@ const ADMIN_PIN = '9753';
             '已登入，但讀取 Firestore 後台權限逾時。請確認 adminUsers/' + user.uid + ' 已建立，且 Firestore Rules 允許讀取。'
           );
 
+          removeAdminLoginPage();
           renderAdminAuthBadge();
 
           if (typeof loadAll === 'function') {
@@ -1734,6 +1773,7 @@ const ADMIN_PIN = '9753';
 
         try {
           state.adminProfile = await loadAdminProfile(user);
+          removeAdminLoginPage();
           renderAdminAuthBadge();
 
           if (typeof loadAll === 'function') {
@@ -1756,6 +1796,7 @@ const ADMIN_PIN = '9753';
         return;
       }
 
+      removeAdminLoginPage();
       renderAdminAuthBadge();
 
       if (state.page === 'dashboard') renderDashboard();
