@@ -2042,17 +2042,19 @@ const ADMIN_PIN = '9753';
         const totalStoredValue = members.reduce((sum, m) => sum + Number(m.storedValue || 0), 0);
         const totalSpend = members.reduce((sum, m) => sum + Number(m.totalSpend || 0), 0);
 
-        const recentMembersHtml = safeRenderAdminTable(
-          typeof renderMembersTable === 'function' ? renderMembersTable : null,
-          members.slice(0, 6),
-          '目前沒有會員資料'
-        );
+        const todayText = getNowText().split(' ')[0];
 
-        const recentWalletHtml = safeRenderAdminTable(
-          typeof renderWalletLogsTable === 'function' ? renderWalletLogsTable : null,
-          walletLogs.slice(0, 6),
-          '目前沒有儲值紀錄'
-        );
+        const todayWalletLogs = walletLogs.filter((log) => {
+          return String(formatAdminDateTime(log.createdAt) || '').startsWith(todayText);
+        });
+
+        const todayStoredIn = todayWalletLogs
+          .filter((log) => Number(log.amount || 0) > 0)
+          .reduce((sum, log) => sum + Number(log.amount || 0), 0);
+
+        const todayStoredOut = todayWalletLogs
+          .filter((log) => Number(log.amount || 0) < 0)
+          .reduce((sum, log) => sum + Math.abs(Number(log.amount || 0)), 0);
 
         page.innerHTML = `
           <div class="cards">
@@ -2062,30 +2064,53 @@ const ADMIN_PIN = '9753';
             </div>
 
             <div class="stat-card">
-              <div class="stat-label">儲值金餘額</div>
+              <div class="stat-label">儲值金總餘額</div>
               <div class="stat-value">$${money(totalStoredValue)}</div>
             </div>
 
             <div class="stat-card">
-              <div class="stat-label">累積消費</div>
+              <div class="stat-label">會員累積消費</div>
               <div class="stat-value">$${money(totalSpend)}</div>
             </div>
 
             <div class="stat-card">
-              <div class="stat-label">最近儲值紀錄</div>
+              <div class="stat-label">儲值紀錄總筆數</div>
               <div class="stat-value">${money(walletLogs.length)}</div>
             </div>
           </div>
 
-          <div class="grid-2">
-            <div class="panel">
-              <h2 class="panel-title">近期會員</h2>
-              ${recentMembersHtml}
+          <div class="cards">
+            <div class="stat-card">
+              <div class="stat-label">今日儲值</div>
+              <div class="stat-value">$${money(todayStoredIn)}</div>
             </div>
 
-            <div class="panel">
-              <h2 class="panel-title">近期儲值金紀錄</h2>
-              ${recentWalletHtml}
+            <div class="stat-card">
+              <div class="stat-label">今日使用儲值金</div>
+              <div class="stat-value">$${money(todayStoredOut)}</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-label">今日儲值紀錄</div>
+              <div class="stat-value">${money(todayWalletLogs.length)}</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-label">目前店別</div>
+              <div class="stat-value" style="font-size: 24px;">
+                ${escapeHtml((state.adminProfile && state.adminProfile.storeName) || '未設定')}
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <h2 class="panel-title">快速入口</h2>
+
+            <div class="btn-row">
+              <button class="btn secondary" onclick="setPage('members')">查看會員清單</button>
+              <button class="btn secondary" onclick="setPage('wallet')">前往儲值頁面</button>
+              <button class="btn secondary" onclick="setPage('logs')">查看儲值紀錄</button>
+              <button class="btn secondary" onclick="setPage('broadcast')">發送訊息 / 優惠券</button>
             </div>
           </div>
         `;
@@ -2103,9 +2128,7 @@ const ADMIN_PIN = '9753';
         .catch((err) => {
           console.error('renderDashboard getDashboard failed', err);
 
-          const current = page.innerHTML || '';
-
-          page.innerHTML = current + `
+          page.innerHTML += `
             <div class="panel">
               <h2 class="panel-title">資料載入失敗</h2>
               <div class="message show">
