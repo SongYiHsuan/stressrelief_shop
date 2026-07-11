@@ -1528,6 +1528,20 @@ const ADMIN_PIN = '9753';
     }
 
     
+    function withTimeout(promise, ms, message) {
+      let timer;
+
+      const timeout = new Promise((_, reject) => {
+        timer = window.setTimeout(() => {
+          reject(new Error(message || '連線逾時，請稍後再試'));
+        }, ms);
+      });
+
+      return Promise.race([promise, timeout]).finally(() => {
+        window.clearTimeout(timer);
+      });
+    }
+
     function renderAdminLoginPage(message = '') {
       document.body.classList.remove('modal-open');
 
@@ -1559,16 +1573,60 @@ const ADMIN_PIN = '9753';
       form.onsubmit = async (event) => {
         event.preventDefault();
 
+        const email = document.getElementById('adminEmail').value.trim();
+        const password = document.getElementById('adminPassword').value;
+
         error.textContent = '';
         btn.disabled = true;
         btn.textContent = '登入中...';
 
         try {
-          await firebaseAuth.signInWithEmailAndPassword(
-            document.getElementById('adminEmail').value.trim(),
-            document.getElementById('adminPassword').value
+          if (!email || !password) {
+            throw new Error('請輸入帳號與密碼');
+          }
+
+          await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+          const credential = await withTimeout(
+            firebaseAuth.signInWithEmailAndPassword(email, password),
+            12000,
+            'Firebase 登入逾時。請確認 Email/Password 登入已啟用，且 GitHub Pages 網域已加入 Firebase Authorized domains。'
           );
+
+          const user = credential.user || firebaseAuth.currentUser;
+
+          if (!user) {
+            throw new Error('登入成功但無法取得使用者資料');
+          }
+
+          state.authReady = true;
+          state.adminUser = user;
+          state.adminProfile = await withTimeout(
+            loadAdminProfile(user),
+            12000,
+            '已登入，但讀取 Firestore 後台權限逾時。請確認 adminUsers/' + user.uid + ' 已建立，且 Firestore Rules 允許讀取。'
+          );
+
+          renderAdminAuthBadge();
+
+          if (typeof loadAll === 'function') {
+            await loadAll();
+          }
+
+          render();
         } catch (err) {
+          console.error(err);
+
+          try {
+            await firebaseAuth.signOut();
+          } catch (signOutErr) {
+            console.warn(signOutErr);
+          }
+
+          state.authReady = true;
+          state.adminUser = null;
+          state.adminProfile = null;
+
           error.textContent = toChineseFirebaseError(err);
           btn.disabled = false;
           btn.textContent = '登入後台';
@@ -1646,25 +1704,26 @@ const ADMIN_PIN = '9753';
     }
 
     function initAdminAuth() {
-      let handled = false;
+      let finished = false;
 
-      const showLoginFallback = () => {
-        if (handled) {
+      window.setTimeout(() => {
+        if (finished) {
           return;
         }
 
-        handled = true;
+        finished = true;
         state.authReady = true;
         state.adminUser = null;
         state.adminProfile = null;
         renderAdminLoginPage();
-      };
-
-      // 保險：Firebase Auth 如果 1.5 秒沒有回應，就直接顯示登入畫面
-      window.setTimeout(showLoginFallback, 1500);
+      }, 1500);
 
       firebaseAuth.onAuthStateChanged(async (user) => {
-        handled = true;
+        if (finished && !user) {
+          return;
+        }
+
+        finished = true;
         state.authReady = true;
         state.adminUser = user || null;
         state.adminProfile = null;
@@ -1684,6 +1743,7 @@ const ADMIN_PIN = '9753';
 
           render();
         } catch (err) {
+          console.error(err);
           await firebaseAuth.signOut();
           renderAdminLoginPage(err.message || String(err));
         }
