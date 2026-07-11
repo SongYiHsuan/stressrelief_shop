@@ -991,6 +991,103 @@
       display: none !important;
     }
 
+  
+    /* ===== 後台上方工具列固定 + 帳號資訊平行排列 ===== */
+
+    .main {
+      padding-top: 104px !important;
+    }
+
+    .topbar {
+      position: fixed !important;
+      top: 0 !important;
+      left: 260px !important;
+      right: 0 !important;
+      z-index: 9000 !important;
+      background: rgba(244, 245, 247, 0.96) !important;
+      backdrop-filter: blur(14px) !important;
+      -webkit-backdrop-filter: blur(14px) !important;
+      padding: 18px 24px !important;
+      margin-bottom: 0 !important;
+      border-bottom: 1px solid rgba(203, 213, 225, 0.75) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+    }
+
+    .topbar-actions {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: flex-end !important;
+      gap: 10px !important;
+      margin-left: auto !important;
+      flex-wrap: nowrap !important;
+    }
+
+    #apiStatus {
+      display: none !important;
+    }
+
+    .admin-auth-badge {
+      position: static !important;
+      right: auto !important;
+      top: auto !important;
+      z-index: auto !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      padding: 10px 13px !important;
+      border-radius: 999px !important;
+      background: #ffffff !important;
+      border: 1px solid #e5e7eb !important;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05) !important;
+      color: #334155 !important;
+      font-size: 14px !important;
+      font-weight: 950 !important;
+      white-space: nowrap !important;
+    }
+
+    .admin-auth-badge button {
+      border: 0 !important;
+      border-radius: 999px !important;
+      padding: 7px 11px !important;
+      background: #f1f5f9 !important;
+      color: #334155 !important;
+      font-weight: 950 !important;
+      cursor: pointer !important;
+    }
+
+    .admin-refresh-btn {
+      flex: 0 0 auto !important;
+      white-space: nowrap !important;
+    }
+
+    @media (max-width: 920px) {
+      .main {
+        padding-top: 150px !important;
+      }
+
+      .topbar {
+        left: 0 !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        padding: 14px 16px !important;
+      }
+
+      .topbar-actions {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        overflow-x: auto !important;
+        padding-bottom: 2px !important;
+      }
+
+      .admin-auth-badge {
+        font-size: 13px !important;
+        padding: 9px 11px !important;
+      }
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
@@ -1031,7 +1128,7 @@
             <span id="adminRefreshText">更新</span>
           </button>
 
-          <div class="status-pill" id="apiStatus">DEMO 模式</div>
+          <div class="status-pill" id="apiStatus"></div>
         </div>
       </div>
 
@@ -1519,14 +1616,10 @@ const ADMIN_PIN = '9753';
       }
 
       if (statusEl) {
-        const storeName = state.adminProfile && state.adminProfile.storeName
-          ? state.adminProfile.storeName
-          : '';
-
-        statusEl.textContent = storeName
-          ? storeName + '｜已連線 GAS'
-          : '已連線 GAS';
+        statusEl.textContent = '';
       }
+
+      renderAdminAuthBadge();
     }
 
     function showMessage(id, text) {
@@ -1717,12 +1810,60 @@ const ADMIN_PIN = '9753';
     }
 
     function renderAdminAuthBadge() {
-      let badge = document.getElementById('adminAuthBadge');
+      const actions = document.querySelector('.topbar-actions');
 
-      if (!state.adminProfile) {
-        if (badge) badge.remove();
+      if (!actions) {
         return;
       }
+
+      const oldFloatingBadges = Array.from(document.querySelectorAll('.admin-auth-badge'));
+      oldFloatingBadges.forEach((badge) => {
+        if (!actions.contains(badge)) {
+          badge.remove();
+        }
+      });
+
+      let badge = document.getElementById('adminAuthBadge');
+
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'adminAuthBadge';
+        badge.className = 'admin-auth-badge';
+        actions.appendChild(badge);
+      }
+
+      const user = state.adminUser || firebaseAuth.currentUser || {};
+      const profile = state.adminProfile || {};
+      const storeName = profile.storeName || '未設定店別';
+      const email = user.email || profile.email || '';
+
+      badge.innerHTML = `
+        <span>${escapeHtml(storeName)}｜${escapeHtml(email)}</span>
+        <button type="button" id="adminLogoutBtn">登出</button>
+      `;
+
+      const logoutBtn = document.getElementById('adminLogoutBtn');
+
+      if (logoutBtn) {
+        logoutBtn.onclick = async () => {
+          await firebaseAuth.signOut();
+
+          state.adminUser = null;
+          state.adminProfile = null;
+          state.members = [];
+          state.walletLogs = [];
+          state.pointLogs = [];
+
+          const currentBadge = document.getElementById('adminAuthBadge');
+
+          if (currentBadge) {
+            currentBadge.remove();
+          }
+
+          renderAdminLoginPage();
+        };
+      }
+    }
 
       if (!badge) {
         badge = document.createElement('div');
