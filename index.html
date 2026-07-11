@@ -1088,11 +1088,39 @@
       }
     }
 
+  
+    /* ===== 後台 Debug 面板 ===== */
+    .admin-debug-panel {
+      position: fixed;
+      left: 280px;
+      right: 20px;
+      bottom: 20px;
+      z-index: 999999;
+      background: #7f1d1d;
+      color: #fff;
+      border-radius: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    .admin-debug-panel.show {
+      display: block;
+    }
+
+    @media (max-width: 920px) {
+      .admin-debug-panel {
+        left: 12px;
+        right: 12px;
+      }
+    }
+
   </style>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
-    initAdminAuth();
-  </script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 
@@ -1137,6 +1165,38 @@
   </div>
 
   <script>
+    function showAdminDebugError(message, detail) {
+      let panel = document.getElementById('adminDebugPanel');
+
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'adminDebugPanel';
+        panel.className = 'admin-debug-panel';
+        document.body.appendChild(panel);
+      }
+
+      panel.classList.add('show');
+      panel.textContent =
+        '後台 Debug 錯誤：\n' +
+        String(message || '') +
+        (detail ? '\n\n' + String(detail) : '');
+    }
+
+    window.addEventListener('error', function (event) {
+      showAdminDebugError(
+        event.message || 'JavaScript error',
+        event.filename + ':' + event.lineno + ':' + event.colno
+      );
+    });
+
+    window.addEventListener('unhandledrejection', function (event) {
+      const reason = event.reason || {};
+      showAdminDebugError(
+        reason.message || 'Promise rejected',
+        reason.stack || String(reason)
+      );
+    });
+
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxzqisX_hvEu5HOpO8Xk_s2EVcwtL-COLtxTQWWfOOQRomT2-dV5CG-t39BmmwXQrna/exec';
     
 
@@ -1590,9 +1650,7 @@ const ADMIN_PIN = '9753';
         const status = document.getElementById('apiStatus');
 
         if (status) {
-          status.textContent = DEMO_MODE
-            ? 'DEMO 模式'
-            : '已更新 ' + state.lastRefreshAt;
+          status.textContent = '';
         }
       } catch (err) {
         alert(err.message || String(err));
@@ -1865,23 +1923,6 @@ const ADMIN_PIN = '9753';
       }
     }
 
-      if (!badge) {
-        badge = document.createElement('div');
-        badge.id = 'adminAuthBadge';
-        badge.className = 'admin-auth-badge';
-        document.body.appendChild(badge);
-      }
-
-      badge.innerHTML = `
-        <span>${escapeHtml(state.adminProfile.storeName)}｜${escapeHtml(state.adminProfile.email)}</span>
-        <button type="button" id="adminLogoutBtn">登出</button>
-      `;
-
-      document.getElementById('adminLogoutBtn').onclick = () => {
-        firebaseAuth.signOut();
-      };
-    }
-
     function initAdminAuth() {
       let finished = false;
 
@@ -1961,6 +2002,27 @@ const ADMIN_PIN = '9753';
         state.pointLogs = state.pointLogs || [];
         state.walletLogs = state.walletLogs || [];
       }
+    }
+
+    function safeRenderAdminTable(renderer, rows, emptyText) {
+      try {
+        if (typeof renderer === 'function') {
+          return renderer(rows || []);
+        }
+      } catch (err) {
+        console.error('table render failed', err);
+        return `
+          <div class="message show">
+            表格載入失敗：${escapeHtml(err.message || String(err))}
+          </div>
+        `;
+      }
+
+      return `
+        <div class="muted">
+          ${escapeHtml(emptyText || '目前沒有資料')}
+        </div>
+      `;
     }
 
     function renderDashboard() {
@@ -2997,8 +3059,7 @@ const ADMIN_PIN = '9753';
       };
     });
 
-    render();
-    preloadData();
+    initAdminAuth();
   
     // adminRefreshBtn clicked by delegation
     document.addEventListener('click', function (event) {
