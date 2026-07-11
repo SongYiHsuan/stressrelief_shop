@@ -1044,7 +1044,7 @@ const ADMIN_PIN = '9753';
     const MEMBER_TAG_OPTIONS = ['', 'VIP', '新客', '常客', '老客'];
 
     const state = {
-      authReady: false,
+      authReady: true,
       adminUser: null,
       adminProfile: null,
       page: 'dashboard',
@@ -1646,20 +1646,36 @@ const ADMIN_PIN = '9753';
     }
 
     function initAdminAuth() {
+      let handled = false;
+
+      const showLoginFallback = () => {
+        if (handled) {
+          return;
+        }
+
+        handled = true;
+        state.authReady = true;
+        state.adminUser = null;
+        state.adminProfile = null;
+        renderAdminLoginPage();
+      };
+
+      // 保險：Firebase Auth 如果 1.5 秒沒有回應，就直接顯示登入畫面
+      window.setTimeout(showLoginFallback, 1500);
+
       firebaseAuth.onAuthStateChanged(async (user) => {
-        state.authReady = false;
+        handled = true;
+        state.authReady = true;
         state.adminUser = user || null;
         state.adminProfile = null;
 
         if (!user) {
-          state.authReady = true;
           renderAdminLoginPage();
           return;
         }
 
         try {
           state.adminProfile = await loadAdminProfile(user);
-          state.authReady = true;
           renderAdminAuthBadge();
 
           if (typeof loadAll === 'function') {
@@ -1668,7 +1684,6 @@ const ADMIN_PIN = '9753';
 
           render();
         } catch (err) {
-          state.authReady = true;
           await firebaseAuth.signOut();
           renderAdminLoginPage(err.message || String(err));
         }
@@ -1677,12 +1692,6 @@ const ADMIN_PIN = '9753';
 
 
     function render() {
-      if (!state.authReady) {
-        const root = document.getElementById('app') || document.querySelector('#root') || document.body;
-        root.innerHTML = '<div class="admin-login-page"><div class="admin-login-card"><h1>確認登入狀態中...</h1><p>請稍候</p></div></div>';
-        return;
-      }
-
       if (!state.adminProfile) {
         renderAdminLoginPage();
         return;
