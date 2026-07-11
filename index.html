@@ -804,6 +804,63 @@
       }
     }
 
+  
+    .topbar-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .admin-refresh-btn {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #e5e7eb;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+      white-space: nowrap;
+    }
+
+    .admin-refresh-btn:hover {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+    }
+
+    .admin-refresh-btn:disabled {
+      opacity: 0.68;
+      cursor: not-allowed;
+    }
+
+    .admin-refresh-btn.is-loading .admin-refresh-icon {
+      animation: adminSpin 0.9s linear infinite;
+    }
+
+    @keyframes adminSpin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .topbar-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .admin-refresh-btn {
+        padding: 9px 12px;
+      }
+    }
+
   </style>
 </head>
 
@@ -831,7 +888,14 @@
           <div class="page-desc" id="pageDesc">會員、儲值金與發送紀錄管理</div>
         </div>
 
-        <div class="status-pill" id="apiStatus">DEMO 模式</div>
+        <div class="topbar-actions">
+          <button class="admin-refresh-btn" id="adminRefreshBtn" type="button">
+            <span class="admin-refresh-icon">↻</span>
+            <span id="adminRefreshText">更新</span>
+          </button>
+
+          <div class="status-pill" id="apiStatus">DEMO 模式</div>
+        </div>
       </div>
 
       <section id="page"></section>
@@ -850,6 +914,8 @@
       members: [],
       pointLogs: [],
       walletLogs: [],
+      refreshingAll: false,
+      lastRefreshAt: '',
       selectedMember: null,
       scannerStream: null,
       scanTimer: null,
@@ -1222,10 +1288,58 @@
       render();
     }
 
+    function setAdminRefreshButton(isLoading) {
+      const btn = document.getElementById('adminRefreshBtn');
+      const textEl = document.getElementById('adminRefreshText');
+
+      if (!btn || !textEl) {
+        return;
+      }
+
+      btn.disabled = isLoading;
+      btn.classList.toggle('is-loading', isLoading);
+      textEl.textContent = isLoading ? '更新中' : '更新';
+    }
+
+    async function refreshAllAdminData() {
+      if (state.refreshingAll) {
+        return;
+      }
+
+      state.refreshingAll = true;
+      setAdminRefreshButton(true);
+
+      try {
+        const data = await api('getDashboard');
+
+        state.members = data.members || [];
+        state.pointLogs = data.pointLogs || [];
+        state.walletLogs = data.walletLogs || [];
+        state.lastRefreshAt = getNowText();
+
+        render();
+
+        const status = document.getElementById('apiStatus');
+
+        if (status) {
+          status.textContent = DEMO_MODE
+            ? 'DEMO 模式'
+            : '已更新 ' + state.lastRefreshAt;
+        }
+      } catch (err) {
+        alert(err.message || String(err));
+      } finally {
+        state.refreshingAll = false;
+        setAdminRefreshButton(false);
+      }
+    }
+
     function setTitle(title, desc) {
       document.getElementById('pageTitle').textContent = title;
       document.getElementById('pageDesc').textContent = desc;
-      document.getElementById('apiStatus').textContent = DEMO_MODE ? 'DEMO 模式' : '已連線 GAS';
+      document.getElementById('apiStatus').textContent = DEMO_MODE
+        ? 'DEMO 模式'
+        : (state.lastRefreshAt ? '已更新 ' + state.lastRefreshAt : '已連線 GAS');
     }
 
     function showMessage(id, text) {
@@ -1769,6 +1883,7 @@
 
           const data = await api('sendBroadcast', payload);
           showMessage('broadcastMsg', '已送出發送任務，成功發送：' + data.sentCount + ' 人');
+          refreshAllAdminData();
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
         } finally {
@@ -2276,6 +2391,18 @@
 
     render();
     preloadData();
-  </script>
+  
+    // adminRefreshBtn clicked by delegation
+    document.addEventListener('click', function (event) {
+      const btn = event.target.closest && event.target.closest('#adminRefreshBtn');
+
+      if (!btn) {
+        return;
+      }
+
+      refreshAllAdminData();
+    });
+
+</script>
 </body>
 </html>
