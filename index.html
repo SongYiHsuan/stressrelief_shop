@@ -975,7 +975,9 @@
 
   </style>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
+    initAdminAuth();
+  </script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 
@@ -1247,6 +1249,10 @@ const ADMIN_PIN = '9753';
         throw new Error('尚未取得後台帳號權限');
       }
 
+      if (!GAS_API_URL) {
+        throw new Error('尚未設定 GAS_API_URL');
+      }
+
       const firebaseIdToken = await user.getIdToken();
 
       const res = await fetch(GAS_API_URL, {
@@ -1270,31 +1276,7 @@ const ADMIN_PIN = '9753';
         throw new Error(json.message || 'API 發生錯誤');
       }
 
-      return json.data;
-    }) {
-      if (DEMO_MODE) {
-        return mockApi(action, payload);
-      }
-
-      const res = await fetch(GAS_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8',
-        },
-        body: JSON.stringify({
-          action,
-          adminPin: ADMIN_PIN,
-          ...payload,
-        }),
-      });
-
-      const json = await res.json();
-
-      if (!json.success) {
-        throw new Error(json.message || 'API 錯誤');
-      }
-
-      return json.data;
+      return json.data || {};
     }
 
     async function mockApi(action, payload) {
@@ -1508,9 +1490,17 @@ const ADMIN_PIN = '9753';
     function setTitle(title, desc) {
       document.getElementById('pageTitle').textContent = title;
       document.getElementById('pageDesc').textContent = desc;
-      document.getElementById('apiStatus').textContent = DEMO_MODE
-        ? 'DEMO 模式'
-        : (state.lastRefreshAt ? '已更新 ' + state.lastRefreshAt : '已連線 GAS');
+
+      const status = document.getElementById('apiStatus');
+      const storeName = state.adminProfile && state.adminProfile.storeName
+        ? state.adminProfile.storeName
+        : '';
+
+      if (status) {
+        status.textContent = state.lastRefreshAt
+          ? (storeName ? storeName + '｜已更新 ' + state.lastRefreshAt : '已更新 ' + state.lastRefreshAt)
+          : (storeName ? storeName + '｜已連線 GAS' : '已連線 GAS');
+      }
     }
 
     function showMessage(id, text) {
@@ -1674,9 +1664,6 @@ const ADMIN_PIN = '9753';
 
           if (typeof loadAll === 'function') {
             await loadAll();
-          } else if (typeof preloadData === 'function') {
-            initAdminAuth();
-    preloadData();
           }
 
           render();
