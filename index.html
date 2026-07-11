@@ -1948,22 +1948,51 @@ const ADMIN_PIN = '9753';
     }
 
     async function loadAll() {
-      const data = await api('getDashboard');
+      try {
+        const data = await api('getDashboard');
 
-      state.members = data.members || [];
-      state.pointLogs = data.pointLogs || [];
-      state.walletLogs = data.walletLogs || [];
+        state.members = data.members || [];
+        state.pointLogs = data.pointLogs || [];
+        state.walletLogs = data.walletLogs || [];
+      } catch (err) {
+        console.error('loadAll failed', err);
+
+        state.members = state.members || [];
+        state.pointLogs = state.pointLogs || [];
+        state.walletLogs = state.walletLogs || [];
+      }
     }
 
     function renderDashboard() {
-      setTitle('總覽', '會員、儲值金與使用紀錄');
+      setTitle('總覽', '會員、儲值金與發送紀錄管理');
+
+      const page = document.getElementById('page');
+
+      if (!page) {
+        return;
+      }
 
       const paint = () => {
-        const totalMembers = state.members.length;
-        const totalStoredValue = state.members.reduce((sum, m) => sum + Number(m.storedValue || 0), 0);
-        const totalSpend = state.members.reduce((sum, m) => sum + Number(m.totalSpend || 0), 0);
+        const members = state.members || [];
+        const walletLogs = state.walletLogs || [];
 
-        document.getElementById('page').innerHTML = `
+        const totalMembers = members.length;
+        const totalStoredValue = members.reduce((sum, m) => sum + Number(m.storedValue || 0), 0);
+        const totalSpend = members.reduce((sum, m) => sum + Number(m.totalSpend || 0), 0);
+
+        const recentMembersHtml = safeRenderAdminTable(
+          typeof renderMembersTable === 'function' ? renderMembersTable : null,
+          members.slice(0, 6),
+          '目前沒有會員資料'
+        );
+
+        const recentWalletHtml = safeRenderAdminTable(
+          typeof renderWalletLogsTable === 'function' ? renderWalletLogsTable : null,
+          walletLogs.slice(0, 6),
+          '目前沒有儲值紀錄'
+        );
+
+        page.innerHTML = `
           <div class="cards">
             <div class="stat-card">
               <div class="stat-label">會員總數</div>
@@ -1979,17 +2008,22 @@ const ADMIN_PIN = '9753';
               <div class="stat-label">累積消費</div>
               <div class="stat-value">$${money(totalSpend)}</div>
             </div>
+
+            <div class="stat-card">
+              <div class="stat-label">最近儲值紀錄</div>
+              <div class="stat-value">${money(walletLogs.length)}</div>
+            </div>
           </div>
 
           <div class="grid-2">
             <div class="panel">
               <h2 class="panel-title">近期會員</h2>
-              ${renderMembersTable(state.members.slice(0, 6))}
+              ${recentMembersHtml}
             </div>
 
             <div class="panel">
               <h2 class="panel-title">近期儲值金紀錄</h2>
-              ${renderWalletLogsTable(state.walletLogs.slice(0, 6))}
+              ${recentWalletHtml}
             </div>
           </div>
         `;
@@ -2002,20 +2036,21 @@ const ADMIN_PIN = '9753';
           state.members = data.members || [];
           state.pointLogs = data.pointLogs || [];
           state.walletLogs = data.walletLogs || [];
-
-          if (state.page === 'dashboard') {
-            paint();
-          }
+          paint();
         })
         .catch((err) => {
-          if (state.page === 'dashboard') {
-            document.getElementById('page').innerHTML = `
-              <div class="panel">
-                <h2 class="panel-title">讀取失敗</h2>
-                <div class="message show">${escapeHtml(err.message || String(err))}</div>
+          console.error('renderDashboard getDashboard failed', err);
+
+          const current = page.innerHTML || '';
+
+          page.innerHTML = current + `
+            <div class="panel">
+              <h2 class="panel-title">資料載入失敗</h2>
+              <div class="message show">
+                ${escapeHtml(err.message || String(err))}
               </div>
-            `;
-          }
+            </div>
+          `;
         });
     }
 
