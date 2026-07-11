@@ -861,7 +861,124 @@
       }
     }
 
+  
+    /* ===== Firebase 後台登入 ===== */
+
+    .admin-login-page {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #f8fafc, #eef2f7);
+    }
+
+    .admin-login-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 22px 60px rgba(15, 23, 42, 0.12);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .admin-login-card h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      color: #111827;
+      font-weight: 950;
+    }
+
+    .admin-login-card p {
+      margin: 0 0 18px;
+      color: #64748b;
+      line-height: 1.7;
+    }
+
+    .admin-login-card label {
+      display: block;
+      margin: 14px 0 7px;
+      color: #334155;
+      font-weight: 900;
+    }
+
+    .admin-login-card input {
+      width: 100%;
+      border: 1px solid #dbe3ef;
+      background: #fff;
+      border-radius: 14px;
+      padding: 13px 14px;
+      color: #111827;
+      outline: none;
+    }
+
+    .admin-login-card input:focus {
+      border-color: #94a3b8;
+      box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.18);
+    }
+
+    .admin-login-card button {
+      width: 100%;
+      margin-top: 18px;
+      border-radius: 14px;
+      padding: 14px;
+      background: #111827;
+      color: #fff;
+      font-weight: 950;
+    }
+
+    .admin-login-card button:disabled {
+      opacity: 0.65;
+    }
+
+    .admin-login-error {
+      margin-top: 12px;
+      color: #b91c1c;
+      font-weight: 800;
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+
+    .admin-auth-badge {
+      position: fixed;
+      right: 16px;
+      top: 14px;
+      z-index: 9999;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+      color: #334155;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .admin-auth-badge button {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 900;
+    }
+
+    @media (max-width: 720px) {
+      .admin-auth-badge {
+        position: static;
+        margin: 10px 12px 0 auto;
+        width: fit-content;
+      }
+    }
+
   </style>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
 </head>
 
 <body>
@@ -904,11 +1021,30 @@
 
   <script>
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwYTYY4jmSekVKGpP1bboarpNgvLzxbMtSHPfyIySrjEte4RNFuAWERZkv3_2VWGQXHhw/exec';
-    const ADMIN_PIN = '9753';
+    
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBphOEvt7usGFUo-_iGxLHTxEi2hk2P8ZA",
+      authDomain: "stressrelief-f80e2.firebaseapp.com",
+      projectId: "stressrelief-f80e2",
+      storageBucket: "stressrelief-f80e2.firebasestorage.app",
+      messagingSenderId: "928737821222",
+      appId: "1:928737821222:web:7d1df952e6ad692891dce7",
+      measurementId: "G-M5LZD4R6TY"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const firebaseAuth = firebase.auth();
+    const firebaseDb = firebase.firestore();
+const ADMIN_PIN = '9753';
     const DEMO_MODE = !GAS_API_URL;
     const MEMBER_TAG_OPTIONS = ['', 'VIP', '新客', '常客', '老客'];
 
     const state = {
+      authReady: false,
+      adminUser: null,
+      adminProfile: null,
       page: 'dashboard',
       loading: false,
       members: [],
@@ -1101,6 +1237,41 @@
 
 
     async function api(action, payload = {}) {
+      const user = firebaseAuth.currentUser;
+
+      if (!user) {
+        throw new Error('請先登入後台');
+      }
+
+      if (!state.adminProfile) {
+        throw new Error('尚未取得後台帳號權限');
+      }
+
+      const firebaseIdToken = await user.getIdToken();
+
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify({
+          action,
+          firebaseIdToken,
+          adminUid: user.uid,
+          adminEmail: user.email || '',
+          storeName: state.adminProfile.storeName || '',
+          ...payload,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.success) {
+        throw new Error(json.message || 'API 發生錯誤');
+      }
+
+      return json.data;
+    }) {
       if (DEMO_MODE) {
         return mockApi(action, payload);
       }
@@ -1366,7 +1537,172 @@
         });
     }
 
+    
+    function renderAdminLoginPage(message = '') {
+      document.body.classList.remove('modal-open');
+
+      const root = document.getElementById('app') || document.querySelector('#root') || document.body;
+
+      root.innerHTML = `
+        <div class="admin-login-page">
+          <form class="admin-login-card" id="adminLoginForm">
+            <h1>解憂藥局後台登入</h1>
+            <p>請使用 Firebase 後台帳號登入。登入後會自動帶入店別，所有儲值與訊息發送都會記錄操作者與店別。</p>
+
+            <label for="adminEmail">帳號 Email</label>
+            <input id="adminEmail" type="email" autocomplete="username" placeholder="例如 wsadwsad3618@gmail.com" required />
+
+            <label for="adminPassword">密碼</label>
+            <input id="adminPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼" required />
+
+            <button id="adminLoginBtn" type="submit">登入後台</button>
+
+            <div class="admin-login-error" id="adminLoginError">${escapeHtml(message)}</div>
+          </form>
+        </div>
+      `;
+
+      const form = document.getElementById('adminLoginForm');
+      const btn = document.getElementById('adminLoginBtn');
+      const error = document.getElementById('adminLoginError');
+
+      form.onsubmit = async (event) => {
+        event.preventDefault();
+
+        error.textContent = '';
+        btn.disabled = true;
+        btn.textContent = '登入中...';
+
+        try {
+          await firebaseAuth.signInWithEmailAndPassword(
+            document.getElementById('adminEmail').value.trim(),
+            document.getElementById('adminPassword').value
+          );
+        } catch (err) {
+          error.textContent = toChineseFirebaseError(err);
+          btn.disabled = false;
+          btn.textContent = '登入後台';
+        }
+      };
+    }
+
+    function toChineseFirebaseError(err) {
+      const code = String((err && err.code) || '');
+
+      if (code.includes('invalid-credential') || code.includes('wrong-password')) {
+        return '帳號或密碼錯誤';
+      }
+
+      if (code.includes('user-not-found')) {
+        return '找不到此後台帳號';
+      }
+
+      if (code.includes('too-many-requests')) {
+        return '嘗試次數過多，請稍後再試';
+      }
+
+      return (err && err.message) || '登入失敗，請稍後再試';
+    }
+
+    async function loadAdminProfile(user) {
+      const doc = await firebaseDb.collection('adminUsers').doc(user.uid).get();
+
+      if (!doc.exists) {
+        throw new Error('此帳號尚未建立後台權限：adminUsers/' + user.uid);
+      }
+
+      const profile = doc.data() || {};
+
+      if (profile.active !== true) {
+        throw new Error('此後台帳號尚未啟用');
+      }
+
+      if (!profile.storeName) {
+        throw new Error('此後台帳號尚未設定店別');
+      }
+
+      return {
+        uid: user.uid,
+        email: user.email || profile.email || '',
+        storeName: profile.storeName || '',
+        role: profile.role || 'staff',
+        displayName: profile.displayName || '',
+      };
+    }
+
+    function renderAdminAuthBadge() {
+      let badge = document.getElementById('adminAuthBadge');
+
+      if (!state.adminProfile) {
+        if (badge) badge.remove();
+        return;
+      }
+
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'adminAuthBadge';
+        badge.className = 'admin-auth-badge';
+        document.body.appendChild(badge);
+      }
+
+      badge.innerHTML = `
+        <span>${escapeHtml(state.adminProfile.storeName)}｜${escapeHtml(state.adminProfile.email)}</span>
+        <button type="button" id="adminLogoutBtn">登出</button>
+      `;
+
+      document.getElementById('adminLogoutBtn').onclick = () => {
+        firebaseAuth.signOut();
+      };
+    }
+
+    function initAdminAuth() {
+      firebaseAuth.onAuthStateChanged(async (user) => {
+        state.authReady = false;
+        state.adminUser = user || null;
+        state.adminProfile = null;
+
+        if (!user) {
+          state.authReady = true;
+          renderAdminLoginPage();
+          return;
+        }
+
+        try {
+          state.adminProfile = await loadAdminProfile(user);
+          state.authReady = true;
+          renderAdminAuthBadge();
+
+          if (typeof loadAll === 'function') {
+            await loadAll();
+          } else if (typeof preloadData === 'function') {
+            initAdminAuth();
+    preloadData();
+          }
+
+          render();
+        } catch (err) {
+          state.authReady = true;
+          await firebaseAuth.signOut();
+          renderAdminLoginPage(err.message || String(err));
+        }
+      });
+    }
+
+
     function render() {
+      if (!state.authReady) {
+        const root = document.getElementById('app') || document.querySelector('#root') || document.body;
+        root.innerHTML = '<div class="admin-login-page"><div class="admin-login-card"><h1>確認登入狀態中...</h1><p>請稍候</p></div></div>';
+        return;
+      }
+
+      if (!state.adminProfile) {
+        renderAdminLoginPage();
+        return;
+      }
+
+      renderAdminAuthBadge();
+
       if (state.page === 'dashboard') renderDashboard();
       if (state.page === 'members') renderMembers();
       if (state.page === 'broadcast') renderBroadcast();
