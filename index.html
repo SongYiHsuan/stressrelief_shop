@@ -3028,25 +3028,41 @@ const ADMIN_PIN = '9753';
                 <th>付款方式</th>
                 <th>店員</th>
                 <th>備註</th>
+                <th>店別</th>
               </tr>
             </thead>
             <tbody>
-              ${list.map((l) => `
-                <tr>
-                  <td>${escapeHtml(l.createdAt)}</td>
-                  <td>
-                    <div class="member-name">${escapeHtml(l.displayName)}</div>
-                    <div class="muted">${escapeHtml(l.memberId)}</div>
-                  </td>
-                  <td><span class="tag ${Number(l.amount) >= 0 ? 'green' : 'red'}">${escapeHtml(l.type)}</span></td>
-                  <td>$${money(l.amount)}</td>
-                  <td>$${money(l.beforeStoredValue)}</td>
-                  <td>$${money(l.afterStoredValue)}</td>
-                  <td>${escapeHtml(l.payMethod || '')}</td>
-                  <td>${escapeHtml(l.staff || '')}</td>
-                  <td>${escapeHtml(l.note || '')}</td>
-                </tr>
-              `).join('')}
+              ${list.map((l) => {
+                const amount = Number(l.amount || 0);
+                const storeName =
+                  l.storeName ||
+                  l.staff ||
+                  '';
+
+                return `
+                  <tr>
+                    <td>${escapeHtml(formatAdminDateTime(l.createdAt) || l.createdAt || '')}</td>
+                    <td>
+                      <div class="member-name">${escapeHtml(l.displayName || '')}</div>
+                      <div class="muted">${escapeHtml(l.memberId || '')}</div>
+                    </td>
+                    <td>
+                      <span class="tag ${amount >= 0 ? 'green' : 'red'}">
+                        ${escapeHtml(l.type || (amount >= 0 ? '儲值' : '使用'))}
+                      </span>
+                    </td>
+                    <td>${amount < 0 ? '-' : ''}$${money(Math.abs(amount))}</td>
+                    <td>$${money(l.beforeStoredValue)}</td>
+                    <td>$${money(l.afterStoredValue)}</td>
+                    <td>${escapeHtml(l.payMethod || '')}</td>
+                    <td>${escapeHtml(l.operatorEmail || l.staff || '')}</td>
+                    <td>${escapeHtml(l.note || '')}</td>
+                    <td>
+                      <span class="tag">${escapeHtml(storeName || '未記錄')}</span>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         </div>
