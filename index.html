@@ -1118,6 +1118,23 @@
       }
     }
 
+  
+    /* ===== 扁平化後台 Logo ===== */
+    .brand {
+      align-items: flex-start !important;
+    }
+
+    .brand-icon {
+      width: 52px !important;
+      height: 52px !important;
+      object-fit: contain !important;
+      display: block !important;
+      background: #ffffff !important;
+      border-radius: 16px !important;
+      padding: 8px !important;
+      margin-bottom: 8px !important;
+    }
+
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1130,6 +1147,7 @@
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
+        <img class="brand-icon" src="images/flat-logo-admin.svg" alt="解憂藥局後台" />
         <div class="brand-title">解憂藥局</div>
         <div class="brand-subtitle">stressrelief_shop 會員管理系統</div>
       </div>
