@@ -1697,7 +1697,7 @@ const ADMIN_PIN = '9753';
       let list = [...demoMembers];
 
       const minPoints = Number(payload.minPoints || 0);
-      const minSpend = Number(payload.minSpend || 0);
+      const joinedAfterDate = String(payload.joinedAfterDate || '').trim();
       const level = String(payload.level || '').trim();
       const tag = String(payload.tag || '').trim().toLowerCase();
       const hasStoredValue = String(payload.hasStoredValue || '');
@@ -1706,8 +1706,31 @@ const ADMIN_PIN = '9753';
         list = list.filter((m) => Number(m.points || 0) >= minPoints);
       }
 
-      if (minSpend > 0) {
-        list = list.filter((m) => Number(m.totalSpend || 0) >= minSpend);
+      if (joinedAfterDate) {
+        list = list.filter((m) => {
+          const rawCreatedAt = String(m.createdAt || '').trim();
+
+          if (!rawCreatedAt) {
+            return false;
+          }
+
+          const match = rawCreatedAt.match(
+            /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/
+          );
+
+          if (!match) {
+            return false;
+          }
+
+          const memberDate =
+            match[1] +
+            '-' +
+            String(match[2]).padStart(2, '0') +
+            '-' +
+            String(match[3]).padStart(2, '0');
+
+          return memberDate >= joinedAfterDate;
+        });
       }
 
       if (level) {
@@ -2553,8 +2576,8 @@ const ADMIN_PIN = '9753';
                 </div>
 
                 <div class="form-row">
-                  <label>最低累積消費</label>
-                  <input id="filterMinSpend" type="number" placeholder="例如 3000" />
+                  <label>此日期後加入</label>
+                  <input id="filterJoinedAfterDate" type="date" />
                 </div>
 
                 <div class="form-row">
@@ -2760,7 +2783,7 @@ const ADMIN_PIN = '9753';
         level: '',
         tag: document.getElementById('filterTag').value,
         minStoredValue: document.getElementById('filterMinStoredValue').value,
-        minSpend: document.getElementById('filterMinSpend').value,
+        joinedAfterDate: document.getElementById('filterJoinedAfterDate').value,
         hasStoredValue: document.getElementById('filterStoredValue').value,
       };
     }
