@@ -1290,6 +1290,8 @@ const ADMIN_PIN = '9753';
       walletLogs: [],
       refreshingAll: false,
       lastRefreshAt: '',
+      broadcastPreviewId: '',
+      broadcastPreviewCount: 0,
       selectedMember: null,
       scannerStream: null,
       scanTimer: null,
@@ -2700,10 +2702,33 @@ const ADMIN_PIN = '9753';
 
           const data = await api('previewBroadcast', payload);
 
-          showMessage('broadcastMsg', '符合條件會員：' + data.count + ' 人');
+          if (!data.previewId) {
+            throw new Error('後端未回傳預覽名單編號');
+          }
+
+          state.broadcastPreviewId = data.previewId;
+          state.broadcastPreviewCount = Number(data.count || 0);
+
+          const sendBtn =
+            document.getElementById('sendBroadcastBtn');
+
+          if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.title = '';
+          }
+
+          showMessage(
+            'broadcastMsg',
+            '符合條件會員：' +
+              data.count +
+              ' 人。正式發送將只限此預覽名單。'
+          );
 
           if (previewEl) {
-            previewEl.innerHTML = renderMembersTable(data.members || []);
+            previewEl.innerHTML =
+              renderMembersTable(
+                data.members || []
+              );
           }
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
@@ -2716,6 +2741,17 @@ const ADMIN_PIN = '9753';
 
       document.getElementById('sendBroadcastBtn').onclick = async () => {
         const payload = getBroadcastPayload();
+
+        if (!state.broadcastPreviewId) {
+          showMessage(
+            'broadcastMsg',
+            '請先按「預覽人數」，確認發送名單後才能發送。'
+          );
+          return;
+        }
+
+        payload.previewId =
+          state.broadcastPreviewId;
 
         if (!payload.title && !payload.content) {
           showMessage('broadcastMsg', '請至少輸入標題或內容。');
@@ -2731,7 +2767,25 @@ const ADMIN_PIN = '9753';
           btn.style.opacity = '0.72';
 
           const data = await api('sendBroadcast', payload);
-          showMessage('broadcastMsg', '已送出發送任務，成功發送：' + data.sentCount + ' 人');
+
+          state.broadcastPreviewId = '';
+          state.broadcastPreviewCount = 0;
+
+          showMessage(
+            'broadcastMsg',
+            '已送出發送任務，成功發送：' +
+              data.sentCount +
+              ' 人'
+          );
+
+          const previewEl =
+            document.getElementById('broadcastPreview');
+
+          if (previewEl) {
+            previewEl.innerHTML =
+              '<div class="muted">已完成發送。再次發送前請重新預覽名單。</div>';
+          }
+
           refreshAllAdminData();
         } catch (err) {
           showMessage('broadcastMsg', err.message || String(err));
@@ -2742,12 +2796,78 @@ const ADMIN_PIN = '9753';
         }
       };
 
+      [
+        'filterTag',
+        'filterMinStoredValue',
+        'filterJoinedAfterDate',
+        'filterStoredValue',
+      ].forEach((id) => {
+        const element =
+          document.getElementById(id);
+
+        if (!element) {
+          return;
+        }
+
+        element.addEventListener(
+          'input',
+          invalidateBroadcastPreview
+        );
+
+        element.addEventListener(
+          'change',
+          invalidateBroadcastPreview
+        );
+      });
+
+      const initialSendBtn =
+        document.getElementById('sendBroadcastBtn');
+
+      if (initialSendBtn) {
+        initialSendBtn.disabled = true;
+        initialSendBtn.title =
+          '請先預覽發送名單';
+      }
+
       document.getElementById('sendTitle').value = getDefaultTitle('imageText');
       document.getElementById('sendContent').value = getDefaultContent('imageText');
       document.getElementById('sendButtonLabel').value = getDefaultButtonLabel('imageText');
       setBroadcastFieldVisibility('imageText');
       updatePreview();
     }
+
+    function invalidateBroadcastPreview() {
+      state.broadcastPreviewId = '';
+      state.broadcastPreviewCount = 0;
+
+      const sendBtn =
+        document.getElementById('sendBroadcastBtn');
+
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.title =
+          '請先重新預覽發送名單';
+      }
+
+      const previewEl =
+        document.getElementById('broadcastPreview');
+
+      if (previewEl) {
+        previewEl.innerHTML =
+          '<div class="muted">篩選條件已變更，請重新預覽名單。</div>';
+      }
+
+      const msg =
+        document.getElementById('broadcastMsg');
+
+      if (msg) {
+        msg.textContent =
+          '篩選條件已變更，請重新預覽名單。';
+
+        msg.classList.add('show');
+      }
+    }
+
 
     function getTypeLabel(type) {
       if (type === 'coupon') return '優惠券';
